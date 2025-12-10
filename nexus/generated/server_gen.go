@@ -22,6 +22,8 @@ func RegisterHandlers(mux *http.ServeMux) {
 	
 	mux.HandleFunc("/libreria-a.transfers.national.Transfer", handlelibreria_a_transfers_national_Transfer)
 	
+	mux.HandleFunc("/libreria-a.transfers.national.ComplexTransfer", handlelibreria_a_transfers_national_ComplexTransfer)
+	
 	mux.HandleFunc("/libreria-a.transfers.international.InternationalTransfer", handlelibreria_a_transfers_international_InternationalTransfer)
 	
 }
@@ -56,8 +58,13 @@ func wrapperlibreria_a_system_GetSystemStatus(params map[string]interface{}) (in
     // Inputs: code(string), 
     
     
-    var val_code string // simplified extraction
     
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_code string
+    
+
     // Fuzzy Match Logic
     found_code := false
     target_code := strings.ToLower(strings.ReplaceAll("code", "_", ""))
@@ -65,7 +72,6 @@ func wrapperlibreria_a_system_GetSystemStatus(params map[string]interface{}) (in
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_code {
-             _ = v
             
             val_code, _ = v.(string)
             
@@ -76,7 +82,6 @@ func wrapperlibreria_a_system_GetSystemStatus(params map[string]interface{}) (in
     
     if !found_code {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
@@ -121,8 +126,13 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     // Inputs: user_id(string), account_id(string), 
     
     
-    var val_user_id string // simplified extraction
     
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_user_id string
+    
+
     // Fuzzy Match Logic
     found_user_id := false
     target_user_id := strings.ToLower(strings.ReplaceAll("user_id", "_", ""))
@@ -130,7 +140,6 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_user_id {
-             _ = v
             
             val_user_id, _ = v.(string)
             
@@ -141,11 +150,14 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     
     if !found_user_id {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_account_id string // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_account_id string
+    
+
     // Fuzzy Match Logic
     found_account_id := false
     target_account_id := strings.ToLower(strings.ReplaceAll("account_id", "_", ""))
@@ -153,7 +165,6 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_account_id {
-             _ = v
             
             val_account_id, _ = v.(string)
             
@@ -164,7 +175,6 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     
     if !found_account_id {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
@@ -209,8 +219,13 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     // Inputs: source_account(string), dest_account(string), amount(float64), currency(string), 
     
     
-    var val_source_account string // simplified extraction
     
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_source_account string
+    
+
     // Fuzzy Match Logic
     found_source_account := false
     target_source_account := strings.ToLower(strings.ReplaceAll("source_account", "_", ""))
@@ -218,7 +233,6 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_source_account {
-             _ = v
             
             val_source_account, _ = v.(string)
             
@@ -229,11 +243,14 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     
     if !found_source_account {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_dest_account string // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_dest_account string
+    
+
     // Fuzzy Match Logic
     found_dest_account := false
     target_dest_account := strings.ToLower(strings.ReplaceAll("dest_account", "_", ""))
@@ -241,7 +258,6 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_dest_account {
-             _ = v
             
             val_dest_account, _ = v.(string)
             
@@ -252,11 +268,14 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     
     if !found_dest_account {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_amount float64 // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_amount float64
+    
+
     // Fuzzy Match Logic
     found_amount := false
     target_amount := strings.ToLower(strings.ReplaceAll("amount", "_", ""))
@@ -264,7 +283,6 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_amount {
-             _ = v
             
             val_amount, _ = v.(float64)
             
@@ -275,11 +293,14 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     
     if !found_amount {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_currency string // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_currency string
+    
+
     // Fuzzy Match Logic
     found_currency := false
     target_currency := strings.ToLower(strings.ReplaceAll("currency", "_", ""))
@@ -287,7 +308,6 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_currency {
-             _ = v
             
             val_currency, _ = v.(string)
             
@@ -298,12 +318,81 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     
     if !found_currency {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
     // Call
     ret0, ret1 := libreria_a_transfers_national.Transfer(val_source_account, val_dest_account, val_amount, val_currency, )
+    
+    
+    // Handle error convention (last return is error)
+    if ret1 != nil {
+        return nil, ret1
+    }
+    return ret0, nil
+    
+}
+
+func handlelibreria_a_transfers_national_ComplexTransfer(w http.ResponseWriter, r *http.Request) {
+	var req GenericRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// 1. Extract Parameters
+	params := req.Params
+	
+	// 2. Call Implementation
+	resp, err := wrapperlibreria_a_transfers_national_ComplexTransfer(params)
+	
+	// 3. Response
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+	}
+	json.NewEncoder(w).Encode(resp)
+	
+}
+
+func wrapperlibreria_a_transfers_national_ComplexTransfer(params map[string]interface{}) (interface{}, error) {
+    // Inputs: req(TransferRequest), 
+    
+    
+    
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_req libreria_a_transfers_national.TransferRequest
+    
+
+    // Fuzzy Match Logic
+    found_req := false
+    target_req := strings.ToLower(strings.ReplaceAll("req", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_req {
+            
+            // Complex Type: Convert map -> json -> struct
+            jsonBody, _ := json.Marshal(v)
+            json.Unmarshal(jsonBody, &val_req)
+            
+            found_req = true
+            break
+        }
+    }
+    
+    if !found_req {
+       // Optional: Log or Error if required param missing?
+    }
+    
+
+    // Call
+    ret0, ret1 := libreria_a_transfers_national.ComplexTransfer(val_req, )
     
     
     // Handle error convention (last return is error)
@@ -343,8 +432,13 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     // Inputs: source_account(string), dest_iban(string), amount(float64), swift_code(string), 
     
     
-    var val_source_account string // simplified extraction
     
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_source_account string
+    
+
     // Fuzzy Match Logic
     found_source_account := false
     target_source_account := strings.ToLower(strings.ReplaceAll("source_account", "_", ""))
@@ -352,7 +446,6 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_source_account {
-             _ = v
             
             val_source_account, _ = v.(string)
             
@@ -363,11 +456,14 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     
     if !found_source_account {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_dest_iban string // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_dest_iban string
+    
+
     // Fuzzy Match Logic
     found_dest_iban := false
     target_dest_iban := strings.ToLower(strings.ReplaceAll("dest_iban", "_", ""))
@@ -375,7 +471,6 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_dest_iban {
-             _ = v
             
             val_dest_iban, _ = v.(string)
             
@@ -386,11 +481,14 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     
     if !found_dest_iban {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_amount float64 // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_amount float64
+    
+
     // Fuzzy Match Logic
     found_amount := false
     target_amount := strings.ToLower(strings.ReplaceAll("amount", "_", ""))
@@ -398,7 +496,6 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_amount {
-             _ = v
             
             val_amount, _ = v.(float64)
             
@@ -409,11 +506,14 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     
     if !found_amount {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
-    var val_swift_code string // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_swift_code string
+    
+
     // Fuzzy Match Logic
     found_swift_code := false
     target_swift_code := strings.ToLower(strings.ReplaceAll("swift_code", "_", ""))
@@ -421,7 +521,6 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_swift_code {
-             _ = v
             
             val_swift_code, _ = v.(string)
             
@@ -432,7 +531,6 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     
     if !found_swift_code {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 

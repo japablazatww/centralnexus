@@ -66,6 +66,10 @@ func (c *LibreriaaTransfersNationalClient) Transfer(req GenericRequest) (interfa
 	return c.transport.Call("libreria-a.transfers.national.Transfer", req)
 }
 
+func (c *LibreriaaTransfersNationalClient) ComplexTransfer(req GenericRequest) (interface{}, error) {
+	return c.transport.Call("libreria-a.transfers.national.ComplexTransfer", req)
+}
+
 
 type LibreriaaTransfersInternationalClient struct {
 	transport Transport
