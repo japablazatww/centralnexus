@@ -2,12 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/japablazatww/centralnexus/nexus/generated"
 )
 
 func main() {
-	client := generated.NewClient("http://localhost:8080")
+	baseURL := os.Getenv("NEXUS_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	client := generated.NewClient(baseURL)
 
 	// 1. Check System Status (using generic Params)
 	fmt.Println("--- Testing GetSystemStatus ---")
