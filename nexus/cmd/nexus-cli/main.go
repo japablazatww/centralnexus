@@ -475,11 +475,26 @@ func typeToString(expr ast.Expr) string {
 }
 
 func toSnakeCase(str string) string {
-	var matchFirstCap = unicode.IsUpper
 	var result strings.Builder
-	for i, r := range str {
-		if matchFirstCap(r) && i > 0 {
-			result.WriteRune('_')
+	runes := []rune(str)
+	length := len(runes)
+
+	for i := 0; i < length; i++ {
+		r := runes[i]
+		if i > 0 && unicode.IsUpper(r) {
+			prev := runes[i-1]
+			// If previous was lower, definitely new word (e.g. user|I)
+			if unicode.IsLower(prev) {
+				result.WriteRune('_')
+			} else if i+1 < length && unicode.IsLower(runes[i+1]) {
+				// If previous was upper, but next is lower, it's a boundary (e.g. HTTP|Server)
+				// prevents H_T_T_P_Server, allows http_server
+				// But what about userID? I=Upper, D=Upper (end).
+				// i=I (Upper). Prev=r (Lower). -> _I
+				// i=D (Upper). Prev=I (Upper). Next=nil. -> D
+				// Result: user_id
+				result.WriteRune('_')
+			}
 		}
 		result.WriteRune(unicode.ToLower(r))
 	}
