@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,11 +26,16 @@ type ParamMetadata struct {
 }
 
 func main() {
-	catalogPath := flag.String("catalog", "../generated/catalog.json", "Path to catalog.json")
+	catalogPath := flag.String("catalog", "", "Path to catalog.json (default: attempts local then ~/.nexus/catalog.json)")
 	searchParam := flag.String("search-param", "", "Search service by parameter name (supports snake, camel, pascal cases)")
 	flag.Parse()
 
-	data, err := os.ReadFile(*catalogPath)
+	finalPath := *catalogPath
+	if finalPath == "" {
+		finalPath = resolveDefaultCatalog()
+	}
+
+	data, err := os.ReadFile(finalPath)
 	if err != nil {
 		fmt.Printf("Error reading catalog: %v\n", err)
 		os.Exit(1)
@@ -88,4 +94,21 @@ func searchByParam(catalog Catalog, query string) []SearchResult {
 // normalize removes underscores and converts to lowercase to match snake, camel, and pascal cases
 func normalize(s string) string {
 	return strings.ToLower(strings.ReplaceAll(s, "_", ""))
+}
+
+func resolveDefaultCatalog() string {
+	// 1. Check local directory
+	if _, err := os.Stat("catalog.json"); err == nil {
+		return "catalog.json"
+	}
+	// 2. Check ~/.nexus/catalog.json
+	home, err := os.UserHomeDir()
+	if err == nil {
+		globalPath := filepath.Join(home, ".nexus", "catalog.json")
+		if _, err := os.Stat(globalPath); err == nil {
+			return globalPath
+		}
+	}
+	// Fallback (will likely fail but returns valid path string)
+	return "catalog.json"
 }

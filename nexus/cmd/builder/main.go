@@ -376,15 +376,31 @@ func generateSDK(meta []FunctionMetadata, outDir string) {
 }
 
 func generateCatalog(cat Catalog, outDir string) {
+	// Write to local output
 	f, err := os.Create(filepath.Join(outDir, "catalog.json"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
 
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	enc.Encode(cat)
+	f.Close()
+
+	// Write to global ~/.nexus/catalog.json
+	home, err := os.UserHomeDir()
+	if err == nil {
+		globalDir := filepath.Join(home, ".nexus")
+		os.MkdirAll(globalDir, 0755)
+		fGlobal, err := os.Create(filepath.Join(globalDir, "catalog.json"))
+		if err == nil {
+			encGlobal := json.NewEncoder(fGlobal)
+			encGlobal.SetIndent("", "  ")
+			encGlobal.Encode(cat)
+			fGlobal.Close()
+			fmt.Printf("Global catalog updated at: %s\n", filepath.Join(globalDir, "catalog.json"))
+		}
+	}
 }
 
 const typesTemplate = `package generated
