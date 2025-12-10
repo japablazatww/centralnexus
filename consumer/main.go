@@ -16,8 +16,8 @@ func main() {
 			"code": "ADMIN123",
 		},
 	}
-	// NOTICE: Using namespaced LibreriaA
-	status, err := client.LibreriaA.GetSystemStatus(statusReq)
+	// NOTICE: Using namespaced LibreriaA -> System
+	status, err := client.LibreriaA.System.GetSystemStatus(statusReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -32,7 +32,8 @@ func main() {
 			"AccountId": "acc_999",  // Pascal
 		},
 	}
-	balance, err := client.LibreriaA.GetUserBalance(balanceReq)
+	// NOTICE: LibreriaA -> Transfers -> National
+	balance, err := client.LibreriaA.Transfers.National.GetUserBalance(balanceReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -40,7 +41,7 @@ func main() {
 	}
 
 	// 3. Transfer
-	fmt.Println("\n--- Testing Transfer ---")
+	fmt.Println("\n--- Testing Transfer (National) ---")
 	transferReq := generated.GenericRequest{
 		Params: map[string]interface{}{
 			"sourceAccount": "acc_999",
@@ -49,10 +50,29 @@ func main() {
 			"currency":      "GTQ",
 		},
 	}
-	txID, err := client.LibreriaA.Transfer(transferReq)
+	// NOTICE: LibreriaA -> Transfers -> National
+	transferRes, err := client.LibreriaA.Transfers.National.Transfer(transferReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
-		fmt.Printf("Transfer ID: %v\n", txID)
+		fmt.Printf("Transfer Result: %v\n", transferRes)
+	}
+
+	// 4. International Transfer
+	fmt.Println("\n--- Testing International Transfer ---")
+	intTransReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"source_account": "acc_999",
+			"dest_iban":      "US123456789",
+			"swift_code":     "SWIFT123",
+			"amount":         2000.00,
+		},
+	}
+	// NOTICE: LibreriaA -> Transfers -> International
+	intRes, err := client.LibreriaA.Transfers.International.InternationalTransfer(intTransReq)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("International Transfer Result: %v\n", intRes)
 	}
 }
