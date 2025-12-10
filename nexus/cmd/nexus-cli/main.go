@@ -64,48 +64,77 @@ type SearchResult struct {
 // --- Main ---
 
 func main() {
-	// Subcommands
-	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
+	// Global Debug Flag? No, flag parsing is per subcommand.
+	// We'll add --debug to each.
 
+	// 1. Build
+	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
+	buildDebug := buildCmd.Bool("debug", false, "Enable verbose output")
+
+	// 2. Search
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
 	searchParam := searchCmd.String("search-param", "", "Search service by parameter name")
+	searchDebug := searchCmd.Bool("debug", false, "Enable verbose output")
+
+	// 3. Dump
+	dumpCmd := flag.NewFlagSet("dump-catalog", flag.ExitOnError)
+	dumpDebug := dumpCmd.Bool("debug", false, "Enable verbose output")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: nexus-cli <command> [arguments]")
-		fmt.Println("Commands: build, search")
+		fmt.Println("Commands: build, search, dump-catalog")
 		os.Exit(1)
 	}
 
 	switch os.Args[1] {
 	case "build":
 		buildCmd.Parse(os.Args[2:])
-		runBuild()
+		runBuild(*buildDebug)
 	case "search":
 		searchCmd.Parse(os.Args[2:])
-		runSearch(*searchParam)
+		runSearch(*searchParam, *searchDebug)
+	case "dump-catalog":
+		dumpCmd.Parse(os.Args[2:])
+		runDump(*dumpDebug)
 	default:
-		// Smart-Run: If argument looks like a flag for search, just search
+		// Smart-Run search?
 		if strings.HasPrefix(os.Args[1], "-") {
 			searchCmd.Parse(os.Args[1:])
-			runSearch(*searchParam)
+			runSearch(*searchParam, *searchDebug)
 		} else {
-			fmt.Println("Expected 'build' or 'search' subcommands.")
+			fmt.Println("Unknown command. Expected 'build', 'search', or 'dump-catalog'.")
 			os.Exit(1)
 		}
 	}
 }
 
+func runDump(debug bool) {
+	path := resolveDefaultCatalog()
+	if debug {
+		fmt.Printf("Reading catalog from: %s\n", path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Printf("Error reading catalog: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(data))
+}
+
 // --- Search Logic ---
 
-func runSearch(query string) {
+func runSearch(query string, debug bool) {
 	// 1. Resolve Catalog Path
 	catalogPath := resolveDefaultCatalog()
+	if debug {
+		fmt.Printf("DEBUG: Using catalog path: %s\n", catalogPath)
+	}
 
 	// 2. Auto-Discovery Check
 	data, err := os.ReadFile(catalogPath)
 	if err != nil {
 		fmt.Println("Catalog not found. Running auto-discovery...")
-		runBuild()
+		runBuild(debug) // Propagate debug
 		// Re-read
 		data, err = os.ReadFile(catalogPath)
 		if err != nil {
@@ -118,12 +147,24 @@ func runSearch(query string) {
 	var catalog Catalog
 	if err := json.Unmarshal(data, &catalog); err != nil {
 		fmt.Printf("Error parsing catalog: %v\n", err)
+		// If data exists but is bad invalid json, maybe print it in debug
+		if debug {
+			fmt.Printf("DEBUG: Invalid JSON content:\n%s\n", string(data))
+		}
 		os.Exit(1)
+	}
+
+	if debug {
+		fmt.Printf("DEBUG: Catalog loaded. %d services found.\n", len(catalog.Services))
 	}
 
 	// 4. Search Execution
 	if query != "" {
+		if debug {
+			fmt.Printf("DEBUG: Searching for param '%s'...\n", query)
+		}
 		results := searchByParam(catalog, query)
+		// ... (rest is same logic, just keeping signatures consistent)
 		if len(results) == 0 {
 			fmt.Println("No services found with that parameter.")
 		} else {
@@ -199,7 +240,7 @@ func resolveDefaultCatalog() string {
 
 // --- Build / Index Logic ---
 
-func runBuild() {
+func runBuild(debug bool) {
 	fmt.Println("Starting Nexus Library Discovery...")
 
 	// Create Temp Dir for safe go get execution
@@ -208,6 +249,10 @@ func runBuild() {
 		log.Fatalf("Error creating temp dir: %v", err)
 	}
 	defer os.RemoveAll(tempDir) // Clean up
+
+	if debug {
+		fmt.Printf("DEBUG: Temp build dir: %s\n", tempDir)
+	}
 
 	// init temp module
 	execCmd(tempDir, "go", "mod", "init", "nexus-temp-builder")
@@ -224,7 +269,7 @@ func runBuild() {
 		fmt.Printf("Checking library: %s ... ", lib)
 
 		// 1. Ensure Installed (in temp module context)
-		if err := ensureLibraryInstalled(tempDir, lib); err != nil {
+		if err := ensureLibraryInstalled(tempDir, lib, debug); err != nil {
 			fmt.Printf("Failed: %v\n", err)
 			continue
 		}
@@ -235,10 +280,17 @@ func runBuild() {
 			fmt.Printf("Error resolving path: %v\n", err)
 			continue
 		}
-		fmt.Println("OK")
+		if debug {
+			fmt.Printf("DEBUG: Resolved path for %s: %s\n", lib, path)
+		} else {
+			fmt.Println("OK")
+		}
 
 		// 3. Parse AST
 		meta, entries := parseLibrary(path, lib)
+		if debug {
+			fmt.Printf("DEBUG: Parsed %d functions from %s\n", len(entries), lib)
+		}
 		allMetadata = append(allMetadata, meta...)
 		catalog.Services = append(catalog.Services, entries...)
 	}
@@ -254,14 +306,18 @@ func execCmd(dir string, name string, args ...string) error {
 	return cmd.Run()
 }
 
-func ensureLibraryInstalled(widthDir string, pkg string) error {
+func ensureLibraryInstalled(widthDir string, pkg string, debug bool) error {
 	// go get pkg@latest
 	// stderr capture for better error reporting
 	cmd := exec.Command("go", "get", pkg+"@latest")
 	cmd.Dir = widthDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// Always return output details
 		return fmt.Errorf("error running go get: %s\nOutput: %s", err, string(output))
+	}
+	if debug {
+		fmt.Printf("\nDEBUG: go get output:\n%s\n", string(output))
 	}
 	return nil
 }
