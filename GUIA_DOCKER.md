@@ -19,6 +19,15 @@ El entorno levanta dos contenedores:
 nexus-cli build
 ```
 
+> **Nota Importante sobre Rutas**:
+> Si ejecutas esto desde la raíz del proyecto, la CLI detectará automáticamente la carpeta `nexus/generated`.
+> Si prefieres ejecutarlo desde otro lugar (o si la autodetección falla), **debes especificar dónde guardar el código** usando el flag `--output`:
+> ```bash
+> nexus-cli build --output D:\banca\centralnexus_poc\centralnexus\nexus\generated
+> ```
+> El objetivo es siempre actualizar los archivos que Docker va a consumir.
+```
+
 Si solo estás probando el repositorio tal cual lo descargaste, salta al paso 2. El código generado ya está versionado.
 
 ### 2. Levantar y Testear
