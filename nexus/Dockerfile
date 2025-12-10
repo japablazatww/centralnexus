@@ -5,7 +5,7 @@ WORKDIR /app
 # We will handle the build in the docker-compose context
 COPY . .
 
-RUN go build -o nexus-server ./centralnexus/nexus
+RUN go build -o nexus-server ./nexus
 
 EXPOSE 8080
 

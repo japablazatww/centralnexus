@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o consumer-app ./centralnexus/consumer
+RUN go build -o consumer-app ./consumer
 
 CMD ["./consumer-app"]
