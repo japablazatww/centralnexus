@@ -73,3 +73,20 @@ Esto mostrará:
 -   Rutas exactas donde busca el catálogo.
 -   Logs de descarga de librerías (`go get`).
 -   Detalles del análisis de código (archivos visitados, funciones encontradas).
+
+## 5. Generación de Código (Under the Hood)
+
+Cuando ejecutas `nexus-cli build`, la herramienta no solo indexa, sino que **escribe código Go** en la carpeta `nexus/generated`.
+
+### Archivos Generados
+1.  **`server_gen.go` (Server Adapters)**:
+    -   Contiene los `http.Handler` para cada función descubierta.
+    -   Implementa la lógica de **Fuzzy Matching** para parámetros (e.g. `user_id` -> `userID`).
+    -   Actúa como puente entre la API HTTP y la librería real.
+
+2.  **`sdk_gen.go` (Client SDK)**:
+    -   Genera una estructura de cliente jerárquica basada en los dominios DDD.
+    -   Permite al consumidor usar autocompletado: `client.LibreriaA.Transfers.National...`.
+    -   Abstrae las llamadas HTTP y la serialización JSON.
+
+*Recuerda: Si algo cambia en las librerías base, corre `build` para actualizar estos archivos.*

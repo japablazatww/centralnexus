@@ -12,7 +12,16 @@ El entorno levanta dos contenedores:
 
 ## Instrucciones Rapidas
 
-### 1. Levantar y Testear
+### 1. Prerrequisito: Generar Código
+Antes de levantar Docker, asegúrate de que el código autogenerado está sincronizado:
+
+```bash
+nexus-cli build
+```
+
+Esto creará `nexus/generated/server_gen.go` y `sdk_gen.go` que Docker necesita para compilar.
+
+### 2. Levantar y Testear
 Ejecuta el siguiente comando en la raíz del proyecto (`centralnexus_poc`):
 
 ```bash

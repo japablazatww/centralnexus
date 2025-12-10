@@ -42,9 +42,37 @@ Esto levantará:
 -   **Nexus Server**: Escuchando en puerto 8080.
 -   **Consumer**: Ejecutará pruebas contra el servidor.
 
-## Desarrollo
+-   **Consumer**: Ejecutará pruebas contra el servidor.
 
-Si deseas modificar la lógica de generación:
+## Flujo de Trabajo y Generación de Código
+
+Es crucial entender cómo y cuándo se genera el código en este ecosistema distribuido.
+
+### 1. ¿Cuándo se genera el código?
+El código (**auto-generado**) reside en `nexus/generated`. Se regenera cuando:
+*   Alguien actualiza una librería externa (e.g. `libreria-a`).
+*   Ejecutas el comando:
+    ```bash
+    nexus-cli build
+    ```
+
+### 2. ¿Cómo funciona "bajo el capó"?
+1.  **Crawl & Index**: La CLI descarga las librerías (`go get`), las analiza (AST Parsing) y detecta funciones exportadas.
+2.  **Catalogación**: Crea un `catalog.json` con metadatos (rutas, parámetros, tipos).
+3.  **Generación de Templates**:
+    *   **Server (`server_gen.go`)**: Crea "Adapters" que normalizan parámetros (Fuzzy Matching) y llaman a la librería real.
+    *   **SDK (`sdk_gen.go`)**: Crea una jerarquía de clientes (`Client.Domain.Subdomain...`) para el consumidor.
+
+### 3. Colaboración: ¿Cuándo pushear?
+**SÍ, se debe pushear el código generado.**
+
+Al trabajar en equipo:
+1.  **Dev A** actualiza `libreria-a`.
+2.  **Dev A** corre `nexus-cli build` localmente para regenerar los adaptadores.
+3.  **Dev A** hace commit de los cambios en `nexus/generated`.
+4.  **Dev B** hace `git pull` y ya tiene el servidor y SDK listos para usar sin necesidad de regenerar nada.
+
+*Si hay conflicto en archivos generados, simplemente descarta tus cambios locales en `generated/` y corre `nexus-cli build` nuevamente.*
 
 1.  Edita `nexus/cmd/nexus-cli`.
 2.  Actualiza el registro en `nexus/cmd/nexus-cli/registry.json`.
