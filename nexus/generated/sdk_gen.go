@@ -8,21 +8,28 @@ import (
 )
 
 type Client struct {
-	BaseURL string
-	HTTP    *http.Client
+	BaseURL    string
+	HTTP       *http.Client
+	LibreriaA  *LibreriaAClient
 }
 
 func NewClient(baseURL string) *Client {
-	return &Client{
+	c := &Client{
 		BaseURL: baseURL,
 		HTTP:    &http.Client{},
 	}
+	c.LibreriaA = &LibreriaAClient{client: c}
+	return c
+}
+
+type LibreriaAClient struct {
+	client *Client
 }
 
 
-func (c *Client) GetUserBalance(req GetUserBalanceRequest) (interface{}, error) {
+func (c *LibreriaAClient) GetUserBalance(req GenericRequest) (interface{}, error) {
 	body, _ := json.Marshal(req)
-	resp, err := c.HTTP.Post(c.BaseURL+"/liba/GetUserBalance", "application/json", bytes.NewBuffer(body))
+	resp, err := c.client.HTTP.Post(c.client.BaseURL+"/liba/GetUserBalance", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -39,9 +46,9 @@ func (c *Client) GetUserBalance(req GetUserBalanceRequest) (interface{}, error) 
 	return result["result"], nil
 }
 
-func (c *Client) Transfer(req TransferRequest) (interface{}, error) {
+func (c *LibreriaAClient) Transfer(req GenericRequest) (interface{}, error) {
 	body, _ := json.Marshal(req)
-	resp, err := c.HTTP.Post(c.BaseURL+"/liba/Transfer", "application/json", bytes.NewBuffer(body))
+	resp, err := c.client.HTTP.Post(c.client.BaseURL+"/liba/Transfer", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -58,9 +65,9 @@ func (c *Client) Transfer(req TransferRequest) (interface{}, error) {
 	return result["result"], nil
 }
 
-func (c *Client) GetSystemStatus(req GetSystemStatusRequest) (interface{}, error) {
+func (c *LibreriaAClient) GetSystemStatus(req GenericRequest) (interface{}, error) {
 	body, _ := json.Marshal(req)
-	resp, err := c.HTTP.Post(c.BaseURL+"/liba/GetSystemStatus", "application/json", bytes.NewBuffer(body))
+	resp, err := c.client.HTTP.Post(c.client.BaseURL+"/liba/GetSystemStatus", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}

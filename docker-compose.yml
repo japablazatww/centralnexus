@@ -1,0 +1,16 @@
+services:
+  nexus:
+    build:
+      context: .
+      dockerfile: centralnexus/nexus/Dockerfile
+    ports:
+      - "8080:8080"
+
+  consumer:
+    build:
+      context: .
+      dockerfile: centralnexus/consumer/Dockerfile
+    depends_on:
+      - nexus
+    environment:
+      - NEXUS_URL=http://nexus:8080

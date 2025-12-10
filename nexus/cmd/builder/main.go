@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -47,15 +49,21 @@ type ParamMetadata struct {
 }
 
 var (
-	inputPath  = flag.String("input", "../../libreria-a", "Path to input library")
+	inputPkg   = flag.String("package", "github.com/japablazatww/libreria-a", "Go package to analyze")
 	outputPath = flag.String("output", "../generated", "Path to output generation")
 )
 
 func main() {
 	flag.Parse()
 
+	inputPath, err := resolvePackagePath(*inputPkg)
+	if err != nil {
+		log.Fatalf("Error resolving package %s: %v", *inputPkg, err)
+	}
+	fmt.Printf("Analyzing package at: %s\n", inputPath)
+
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, *inputPath, nil, parser.ParseComments)
+	pkgs, err := parser.ParseDir(fset, inputPath, nil, parser.ParseComments)
 	if err != nil {
 		log.Fatalf("Error parsing directory: %v", err)
 	}
@@ -131,6 +139,15 @@ func main() {
 	generateCatalog(catalog, *outputPath)
 }
 
+func resolvePackagePath(pkg string) (string, error) {
+	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", pkg)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
 func typeToString(expr ast.Expr) string {
 	switch t := expr.(type) {
 	case *ast.Ident:
@@ -171,15 +188,57 @@ import (
 	"encoding/json"
 	"net/http"
 	"github.com/japablazatww/libreria-a"
+	"fmt"
+	"strings"
+	"unicode"
 )
-
-
 
 func RegisterHandlers(mux *http.ServeMux) {
 	{{ range . }}
 	mux.HandleFunc("/liba/{{ .Name }}", handle{{ .Name }})
 	{{ end }}
 }
+
+func getParam(params map[string]interface{}, name string) (interface{}, error) {
+	// 1. Try exact match
+	if v, ok := params[name]; ok { return v, nil }
+
+	// 2. Case-Insensitive Match
+	// Create a normalized map where keys are lowercased (without underscores for fuzzy matching might be better, but let's stick to lower case first)
+	// For performance in a real app this should be done once per request, but for PoC this function is fine.
+	target := strings.ToLower(name)
+	targetNoUnderscore := strings.ReplaceAll(target, "_", "")
+
+	for k, v := range params {
+		kLower := strings.ToLower(k)
+		if kLower == target { return v, nil }
+		
+		// 3. Fuzzy match (ignoring underscores) e.g. "user_id" vs "userid"
+		kNoUnderscore := strings.ReplaceAll(kLower, "_", "")
+		if kNoUnderscore == targetNoUnderscore { return v, nil }
+	}
+
+	return nil, fmt.Errorf("param %s not found in request params", name)
+}
+
+func toSnakeCase(str string) string {
+	var matchFirstCap = unicode.IsUpper
+	var result strings.Builder
+	for i, r := range str {
+		if matchFirstCap(r) && i > 0 {
+			result.WriteRune('_')
+		}
+		result.WriteRune(unicode.ToLower(r))
+	}
+	return result.String()
+}
+
+func toPascalCase(str string) string {
+	if len(str) == 0 { return "" }
+	return strings.ToUpper(str[:1]) + str[1:]
+}
+
+
 
 {{ range . }}
 func handle{{ .Name }}(w http.ResponseWriter, r *http.Request) {
@@ -188,15 +247,48 @@ func handle{{ .Name }}(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req {{ .RequestStruct }}
+	var req GenericRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	params := req.Params
+	if params == nil {
+		params = make(map[string]interface{})
+	}
+
+	// Dynamic Parameter Extraction
+	{{ range .Params }}
+	val_{{ .Name }}, err := getParam(params, "{{ .Name }}")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	// Type Assertion/Conversion (Simplified for PoC - assumes correct JSON types or simple string conversions)
+	var arg_{{ .Name }} {{ .Type }}
+	
+	switch v := val_{{ .Name }}.(type) {
+	case {{ .Type }}:
+		arg_{{ .Name }} = v
+	{{ if (or (eq .Type "int") (and (eq .Type "float64") false)) }}
+	case float64:
+		// JSON numbers are float64
+		{{ if eq .Type "int" }}arg_{{ .Name }} = int(v){{ end }}
+	{{ end }}
+	{{ if ne .Type "string" }}
+	case string:
+		// Try to handle string if needed, currently empty for strict types but avoided duplicate case
+	{{ end }}
+	default:
+		_ = v
+	}
+	{{ end }}
+
 	// Call underlying library
 	{{ if gt (len .Returns) 0 }}res, err := {{ end }}liba.{{ .Name }}(
-		{{ range .Params }}req.{{ .FieldName }},
+		{{ range .Params }}arg_{{ .Name }},
 		{{ end }}
 	)
 
@@ -221,21 +313,28 @@ import (
 )
 
 type Client struct {
-	BaseURL string
-	HTTP    *http.Client
+	BaseURL    string
+	HTTP       *http.Client
+	LibreriaA  *LibreriaAClient
 }
 
 func NewClient(baseURL string) *Client {
-	return &Client{
+	c := &Client{
 		BaseURL: baseURL,
 		HTTP:    &http.Client{},
 	}
+	c.LibreriaA = &LibreriaAClient{client: c}
+	return c
+}
+
+type LibreriaAClient struct {
+	client *Client
 }
 
 {{ range . }}
-func (c *Client) {{ .Name }}(req {{ .RequestStruct }}) (interface{}, error) {
+func (c *LibreriaAClient) {{ .Name }}(req GenericRequest) (interface{}, error) {
 	body, _ := json.Marshal(req)
-	resp, err := c.HTTP.Post(c.BaseURL+"/liba/{{ .Name }}", "application/json", bytes.NewBuffer(body))
+	resp, err := c.client.HTTP.Post(c.client.BaseURL+"/liba/{{ .Name }}", "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -290,14 +389,10 @@ func generateCatalog(cat Catalog, outDir string) {
 
 const typesTemplate = `package generated
 
-{{ range . }}
-// {{ .RequestStruct }} defines the input for {{ .Name }}
-type {{ .RequestStruct }} struct {
-	{{ range .Params }}
-	{{ .FieldName }} {{ .Type }} ` + "`json:\"{{ .JSONTag }}\"`" + `
-	{{ end }}
+// GenericRequest is the standard request envelope
+type GenericRequest struct {
+	Params map[string]interface{} ` + "`json:\"params\"`" + `
 }
-{{ end }}
 `
 
 func generateTypes(meta []FunctionMetadata, outDir string) {

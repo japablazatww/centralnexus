@@ -9,25 +9,30 @@ import (
 func main() {
 	client := generated.NewClient("http://localhost:8080")
 
-	// 1. Check System Status
+	// 1. Check System Status (using generic Params)
 	fmt.Println("--- Testing GetSystemStatus ---")
-	statusReq := generated.GetSystemStatusRequest{
-		Code: "ADMIN123",
+	statusReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"code": "ADMIN123",
+		},
 	}
-	status, err := client.GetSystemStatus(statusReq)
+	// NOTICE: Using namespaced LibreriaA
+	status, err := client.LibreriaA.GetSystemStatus(statusReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
 		fmt.Printf("System Status: %v\n", status)
 	}
 
-	// 2. Get User Balance
-	fmt.Println("\n--- Testing GetUserBalance ---")
-	balanceReq := generated.GetUserBalanceRequest{
-		UserID:    "user_001",
-		AccountID: "acc_999",
+	// 2. Get User Balance (Testing different Cases)
+	fmt.Println("\n--- Testing GetUserBalance (CamelCase/SnakeCase check) ---")
+	balanceReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"user_id":   "user_001", // Snake
+			"AccountId": "acc_999",  // Pascal
+		},
 	}
-	balance, err := client.GetUserBalance(balanceReq)
+	balance, err := client.LibreriaA.GetUserBalance(balanceReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -36,21 +41,18 @@ func main() {
 
 	// 3. Transfer
 	fmt.Println("\n--- Testing Transfer ---")
-	transferReq := generated.TransferRequest{
-		SourceAccount: "acc_999",
-		DestAccount:   "acc_888",
-		Amount:        50.0,
-		Currency:      "GTQ",
+	transferReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"sourceAccount": "acc_999",
+			"destAccount":   "acc_888",
+			"amount":        50.0,
+			"currency":      "GTQ",
+		},
 	}
-	txID, err := client.Transfer(transferReq)
+	txID, err := client.LibreriaA.Transfer(transferReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
 		fmt.Printf("Transfer ID: %v\n", txID)
 	}
-
-	// 4. Test Parameter Mapping (Case insensitivity check simulation)
-	// The generated SDK uses strict JSON tags, but the Nexus server *could* benefit from
-	// a more flexible decoder in a real scenario. For this PoC, we demonstrate
-	// the standard generated client usage which guarantees contract compliance.
 }
