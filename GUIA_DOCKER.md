@@ -16,7 +16,6 @@ El entorno levanta dos contenedores:
 **Solo si has modificado código en `libreria-a` o agregado nuevas librerías**, necesitas regenerar el código antes de levantar Docker.
 
 ```bash
-cd nexus/cmd/nexus-cli
 nexus-cli build
 ```
 
