@@ -21,6 +21,12 @@ var registryData []byte
 
 // --- Structs ---
 
+type LibConfig struct {
+	HasNestedDomains bool     `json:"hasNestedDomains"`
+	Domains          []string `json:"domains"`
+	IsDomain         bool     `json:"isDomain"`
+}
+
 type FunctionMetadata struct {
 	Name           string
 	Params         []Param
@@ -64,19 +70,14 @@ type SearchResult struct {
 // --- Main ---
 
 func main() {
-	// Global Debug Flag? No, flag parsing is per subcommand.
-	// We'll add --debug to each.
-
-	// 1. Build
+	// Subcommands
 	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
 	buildDebug := buildCmd.Bool("debug", false, "Enable verbose output")
 
-	// 2. Search
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
 	searchParam := searchCmd.String("search-param", "", "Search service by parameter name")
 	searchDebug := searchCmd.Bool("debug", false, "Enable verbose output")
 
-	// 3. Dump
 	dumpCmd := flag.NewFlagSet("dump-catalog", flag.ExitOnError)
 	dumpDebug := dumpCmd.Bool("debug", false, "Enable verbose output")
 
@@ -147,7 +148,6 @@ func runSearch(query string, debug bool) {
 	var catalog Catalog
 	if err := json.Unmarshal(data, &catalog); err != nil {
 		fmt.Printf("Error parsing catalog: %v\n", err)
-		// If data exists but is bad invalid json, maybe print it in debug
 		if debug {
 			fmt.Printf("DEBUG: Invalid JSON content:\n%s\n", string(data))
 		}
@@ -164,7 +164,6 @@ func runSearch(query string, debug bool) {
 			fmt.Printf("DEBUG: Searching for param '%s'...\n", query)
 		}
 		results := searchByParam(catalog, query)
-		// ... (rest is same logic, just keeping signatures consistent)
 		if len(results) == 0 {
 			fmt.Println("No services found with that parameter.")
 		} else {
@@ -238,23 +237,22 @@ func resolveDefaultCatalog() string {
 	return "catalog.json"
 }
 
-// --- Build / Index Logic ---
+// --- Build / Crawler Logic ---
 
 func runBuild(debug bool) {
-	fmt.Println("Starting Nexus Library Discovery...")
+	fmt.Println("Starting Nexus Library Discovery (DDD Mode)...")
 
-	// Create Temp Dir for safe go get execution
+	// Create Temp Dir
 	tempDir, err := os.MkdirTemp("", "nexus-build")
 	if err != nil {
 		log.Fatalf("Error creating temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir) // Clean up
+	defer os.RemoveAll(tempDir)
 
 	if debug {
 		fmt.Printf("DEBUG: Temp build dir: %s\n", tempDir)
 	}
 
-	// init temp module
 	execCmd(tempDir, "go", "mod", "init", "nexus-temp-builder")
 
 	var libraries []string
@@ -262,72 +260,114 @@ func runBuild(debug bool) {
 		log.Fatalf("Error parsing internal registry: %v", err)
 	}
 
-	var allMetadata []FunctionMetadata
 	var catalog Catalog
 
 	for _, lib := range libraries {
-		fmt.Printf("Checking library: %s ... ", lib)
+		fmt.Printf("Checking library: %s (@develop) ... ", lib)
 
-		// 1. Ensure Installed (in temp module context)
-		if err := ensureLibraryInstalled(tempDir, lib, debug); err != nil {
+		// 1. Ensure Installed (FORCE @develop)
+		// NOTE: In production this should come from registry.json metadata
+		if err := ensureLibraryInstalled(tempDir, lib, "develop", debug); err != nil {
 			fmt.Printf("Failed: %v\n", err)
 			continue
 		}
 
-		// 2. Resolve Path (using go list in temp context)
-		path, err := resolvePackagePath(tempDir, lib, debug)
+		// 2. Resolve Root Path
+		rootPath, err := resolvePackagePath(tempDir, lib, debug)
 		if err != nil {
 			fmt.Printf("Error resolving path: %v\n", err)
 			continue
 		}
 		if debug {
-			fmt.Printf("DEBUG: Resolved path for %s: %s\n", lib, path)
+			fmt.Printf("DEBUG: Root path for %s: %s\n", lib, rootPath)
 		} else {
 			fmt.Println("OK")
 		}
 
-		// 3. Parse AST
-		meta, entries := parseLibrary(path, lib, debug)
-		if debug {
-			fmt.Printf("DEBUG: Parsed %d functions from %s\n", len(entries), lib)
-		}
-		allMetadata = append(allMetadata, meta...)
-		catalog.Services = append(catalog.Services, entries...)
+		// 3. Crawl Recursively
+		// Simplify namespace: github.com/japablazatww/libreria-a -> libreria-a
+		baseNamespace := filepath.Base(lib)
+		crawlLibrary(rootPath, baseNamespace, &catalog, debug)
 	}
 
 	updateGlobalCatalog(catalog)
 }
 
+func crawlLibrary(currentPath string, currentNamespace string, catalog *Catalog, debug bool) {
+	if debug {
+		fmt.Printf("DEBUG: Crawling %s (NS: %s)\n", currentPath, currentNamespace)
+	}
+
+	// 1. Read lib_config.json
+	configFile := filepath.Join(currentPath, "lib_config.json")
+	configData, err := os.ReadFile(configFile)
+	if err != nil {
+		if debug {
+			fmt.Printf("DEBUG: No lib_config.json in %s\n", currentPath)
+		}
+		return
+	}
+
+	var config LibConfig
+	if err := json.Unmarshal(configData, &config); err != nil {
+		if debug {
+			fmt.Printf("DEBUG: Invalid lib_config.json in %s: %v\n", currentPath, err)
+		}
+		return
+	}
+
+	// 2. If it is a domain with functions, parse them
+	if config.IsDomain {
+		if debug {
+			fmt.Printf("DEBUG: Found Domain at %s. Parsing functions...\n", currentNamespace)
+		}
+		_, entries := parseLibrary(currentPath, currentNamespace, debug)
+		catalog.Services = append(catalog.Services, entries...)
+	}
+
+	// 3. If it has nested domains, recurse
+	if config.HasNestedDomains {
+		for _, domain := range config.Domains {
+			subPath := filepath.Join(currentPath, domain)
+			// Construct nested namespace: libreria-a.transfers.national
+			subNamespace := fmt.Sprintf("%s.%s", currentNamespace, domain)
+			crawlLibrary(subPath, subNamespace, catalog, debug)
+		}
+	}
+}
+
 func execCmd(dir string, name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
-	// cmd.Stdout = os.Stdout // Uncomment for verbose debug
-	// cmd.Stderr = os.Stderr // Uncomment for verbose debug
 	return cmd.Run()
 }
 
-func ensureLibraryInstalled(widthDir string, pkg string, debug bool) error {
-	// go get pkg@latest
-	// stderr capture for better error reporting
-	cmd := exec.Command("go", "get", pkg+"@latest")
+func ensureLibraryInstalled(widthDir string, pkg string, version string, debug bool) error {
+	// usage: go get pkg@version
+	target := fmt.Sprintf("%s@%s", pkg, version)
+	cmd := exec.Command("go", "get", target)
 	cmd.Dir = widthDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		// Always return output details
 		return fmt.Errorf("error running go get: %s\nOutput: %s", err, string(output))
 	}
 	if debug {
 		fmt.Printf("\nDEBUG: go get output:\n%s\n", string(output))
 	}
+
 	return nil
 }
 
 func resolvePackagePath(withDir string, pkg string, debug bool) (string, error) {
-	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", pkg)
+	// Use -m to resolve the Module Root, as the root might not be a package anymore (no .go files)
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", pkg)
 	cmd.Dir = withDir
-	output, err := cmd.Output()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		if debug {
+			fmt.Printf("DEBUG: go list error output:\n%s\n", string(output))
+		}
+		return "", fmt.Errorf("go list failed: %v", err)
 	}
 	path := strings.TrimSpace(string(output))
 	if debug {
@@ -338,34 +378,25 @@ func resolvePackagePath(withDir string, pkg string, debug bool) (string, error) 
 
 func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata, []ServiceEntry) {
 	fset := token.NewFileSet()
+	// Parse only .go files in this directory
 	pkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		log.Printf("Warning: error parsing %s: %v", path, err)
 		return nil, nil
-	}
-	if debug {
-		fmt.Printf("DEBUG: ParseDir found %d packages in %s\n", len(pkgs), path)
 	}
 
 	var metadata []FunctionMetadata
 	var entries []ServiceEntry
 
 	for _, pkg := range pkgs {
-		if debug {
-			fmt.Printf("DEBUG: Visiting package %s\n", pkg.Name)
-		}
 		for _, file := range pkg.Files {
-			if debug {
-				fmt.Printf("DEBUG: Visiting file in %s\n", pkg.Name)
-			}
 			for _, decl := range file.Decls {
 				if fn, ok := decl.(*ast.FuncDecl); ok {
 					if !fn.Name.IsExported() {
 						continue
 					}
-					if debug {
-						fmt.Printf("DEBUG: Found exported func %s\n", fn.Name.Name)
-					}
+					// Check convention: Files containing functions usually named 'functions.go'
+					// But we parse all for now.
 
 					fname := fn.Name.Name
 
@@ -376,14 +407,12 @@ func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata
 						typeExpr := typeToString(field.Type)
 						for _, name := range field.Names {
 							pName := name.Name
-							// Add to internal params (for server gen compat if needed later)
 							params = append(params, Param{
 								Name:      pName,
 								Type:      typeExpr,
 								JSONTag:   toSnakeCase(pName),
 								FieldName: toPascalCase(pName),
 							})
-							// Add to Catalog Inputs
 							inputs = append(inputs, ParamMetadata{
 								Name: toSnakeCase(pName),
 								Type: typeExpr,
@@ -397,10 +426,6 @@ func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata
 					if fn.Type.Results != nil {
 						for i, field := range fn.Type.Results.List {
 							typeExpr := typeToString(field.Type)
-							// Return values often don't have names, or share types
-							// We make best effort to label them if multiple
-							// If named returns, we use them. Else "ret0", "ret1" or request user spec?
-							// For PoC: just show types.
 							name := ""
 							if len(field.Names) > 0 {
 								for _, n := range field.Names {
@@ -408,7 +433,6 @@ func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata
 									outputs = append(outputs, ParamMetadata{Name: name, Type: typeExpr})
 								}
 							} else {
-								// Unnamed return
 								name = fmt.Sprintf("result_%d", i)
 								outputs = append(outputs, ParamMetadata{Name: name, Type: typeExpr})
 							}
@@ -426,7 +450,7 @@ func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata
 					metadata = append(metadata, meta)
 
 					entries = append(entries, ServiceEntry{
-						Namespace:   strings.TrimPrefix(namespace, "github.com/japablazatww/"),
+						Namespace:   namespace, // Namespace is passed from crawler now
 						Method:      fname,
 						Description: strings.TrimSpace(fn.Doc.Text()),
 						Inputs:      inputs,
@@ -483,16 +507,9 @@ func toSnakeCase(str string) string {
 		r := runes[i]
 		if i > 0 && unicode.IsUpper(r) {
 			prev := runes[i-1]
-			// If previous was lower, definitely new word (e.g. user|I)
 			if unicode.IsLower(prev) {
 				result.WriteRune('_')
 			} else if i+1 < length && unicode.IsLower(runes[i+1]) {
-				// If previous was upper, but next is lower, it's a boundary (e.g. HTTP|Server)
-				// prevents H_T_T_P_Server, allows http_server
-				// But what about userID? I=Upper, D=Upper (end).
-				// i=I (Upper). Prev=r (Lower). -> _I
-				// i=D (Upper). Prev=I (Upper). Next=nil. -> D
-				// Result: user_id
 				result.WriteRune('_')
 			}
 		}
