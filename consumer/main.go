@@ -33,8 +33,8 @@ func main() {
 	fmt.Println("\n--- Testing GetUserBalance (CamelCase/SnakeCase check) ---")
 	balanceReq := generated.GenericRequest{
 		Params: map[string]interface{}{
-			"user_id":    "user_001", // Protocol enforces snake_case
-			"account_id": "acc_999",  // Protocol enforces snake_case
+			"userID":    "user_001", // Works! (Fuzzy Match -> user_id)
+			"AccountId": "acc_999",  // Works! (Fuzzy Match -> account_id)
 		},
 	}
 	// NOTICE: Libreriaa -> Transfers -> National
