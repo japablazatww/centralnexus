@@ -90,15 +90,16 @@ Cuando ejecutas `nexus-cli build`, la herramienta no solo indexa, sino que **esc
     -   Abstrae las llamadas HTTP y la serialización JSON.
 
 ### ¿Dónde debo ejecutar `nexus-cli build`?
-Actualmente, la herramienta asume una estructura de carpetas específica para saber dónde depositar el código generado (`nexus/generated`).
+La herramienta tiene detección inteligente de la carpeta `nexus/generated`.
 
-**Debes ejecutar el comando desde dentro de `nexus/cmd/nexus-cli`:**
+**Opciones:**
+1.  **Automático**: Ejecuta desde cualquier subcarpeta conocida (`root`, `nexus/`, `nexus/cmd/`...). La herramienta buscará `generated` hacia arriba o abajo.
+2.  **Manual**: Si no la encuentra, usa el flag `--output`:
 
 ```bash
-cd nexus/cmd/nexus-cli
-nexus-cli build
+nexus-cli build --output /ruta/absoluta/a/nexus/generated
 ```
 
-Esto asegura que los archivos `server_gen.go` y `sdk_gen.go` se escriban correctamente en `../../generated`.
+Esto te da flexibilidad total para ejecutar la CLI desde donde quieras.
 
 *Recuerda: Si algo cambia en las librerías base, corre `build` para actualizar estos archivos.*

@@ -75,6 +75,7 @@ func main() {
 	// Subcommands
 	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
 	buildDebug := buildCmd.Bool("debug", false, "Enable verbose output")
+	buildOutput := buildCmd.String("output", "", "Path to the 'nexus/generated' directory")
 
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
 	searchParam := searchCmd.String("search-param", "", "Search service by parameter name")
@@ -92,7 +93,7 @@ func main() {
 	switch os.Args[1] {
 	case "build":
 		buildCmd.Parse(os.Args[2:])
-		runBuild(*buildDebug)
+		runBuild(*buildDebug, *buildOutput)
 	case "search":
 		searchCmd.Parse(os.Args[2:])
 		runSearch(*searchParam, *searchDebug)
@@ -137,7 +138,7 @@ func runSearch(query string, debug bool) {
 	data, err := os.ReadFile(catalogPath)
 	if err != nil {
 		fmt.Println("Catalog not found. Running auto-discovery...")
-		runBuild(debug) // Propagate debug
+		runBuild(debug, "") // Propagate debug, no output override
 		// Re-read
 		data, err = os.ReadFile(catalogPath)
 		if err != nil {
@@ -239,9 +240,42 @@ func resolveDefaultCatalog() string {
 	return "catalog.json"
 }
 
+func resolveOutputDir(flagPath string) (string, error) {
+	// 1. Explicit Flag
+	if flagPath != "" {
+		if _, err := os.Stat(flagPath); os.IsNotExist(err) {
+			// Try to create it if explicitly asked
+			if err := os.MkdirAll(flagPath, 0755); err != nil {
+				return "", fmt.Errorf("could not create output dir %s: %v", flagPath, err)
+			}
+		}
+		return flagPath, nil
+	}
+
+	// 2. Auto-Discovery Candidates
+	// We look for a folder named "generated" in common locations.
+	candidates := []string{
+		"generated",       // Run from nexus/
+		"nexus/generated", // Run from repo root
+		"../../generated", // Run from nexus/cmd/nexus-cli
+		"../generated",    // Run from nexus/cmd
+	}
+
+	for _, c := range candidates {
+		info, err := os.Stat(c)
+		if err == nil && info.IsDir() {
+			abs, _ := filepath.Abs(c)
+			return abs, nil
+		}
+	}
+
+	// 3. Fallback: Fail nicely
+	return "", fmt.Errorf("could not auto-detect 'generated' directory")
+}
+
 // --- Build / Crawler Logic ---
 
-func runBuild(debug bool) {
+func runBuild(debug bool, outputFlag string) {
 	fmt.Println("Starting Nexus Library Discovery (DDD Mode)...")
 
 	// Create Temp Dir
@@ -296,28 +330,13 @@ func runBuild(debug bool) {
 	updateGlobalCatalog(catalog)
 
 	// 4. Generate Code (Server & SDK)
-	// We output to "../../generated" relative to where the CLI is run?
-	// Actually, the CLI might be run from anywhere.
-	// For this PoC, we assume running from `nexus/cmd/nexus-cli` or root.
-	// Let's try to locate the `nexus/generated` folder.
-	// We'll trust the user to be in the repo or provide an output flag.
-	// For now, hardcode "../generated" relative to CLI execution if in cmd/nexus-cli
-	// better: "../../generated" if in cmd/nexus-cli.
-	// Let's use a flag or default to "./generated" if current dir has go.mod, etc.
-	// Simplest for PoC: assume we are in `centralnexus/nexus` or `centralnexus` root and have a specific target.
-	// Let's force output to `generated/` in current dir? No, the server expects `nexus/generated`.
-	// We will try to write to `../generated` assuming usage from `cmd/nexus-cli` during dev,
-	// BUT for the installable CLI, it should probably just update catalog.
-	// Wait, the USER specifically asked for code generation to test the CONSUMER.
-	// The consumer imports `github.com/japablazatww/centralnexus/nexus/generated`.
-	// So we must update THAT source file in the repo.
-
-	// Resolution: valid valid path check
-	outputDir := "../../generated"
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		// Try creating it?
-		os.MkdirAll(outputDir, 0755)
+	outputDir, err := resolveOutputDir(outputFlag)
+	if err != nil {
+		fmt.Printf("Error resolving output directory: %v\n", err)
+		fmt.Println("Tip: Use --output <path> to specify the 'nexus/generated' folder.")
+		return
 	}
+	fmt.Printf("Writing generated code to: %s\n", outputDir)
 
 	if err := generateServer(catalog, allMetadata, outputDir); err != nil {
 		fmt.Printf("Error generating server: %v\n", err)
