@@ -123,63 +123,63 @@ func handlelibreria_a_transfers_national_GetUserBalance(w http.ResponseWriter, r
 }
 
 func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]interface{}) (interface{}, error) {
-    // Inputs: user_id(string), account_id(string), 
+    // Inputs: user_i_d(string), account_i_d(string), 
     
     
     
     
     // Determine Type string (Primitive vs Complex)
     
-    var val_user_id string
+    var val_user_i_d string
     
 
     // Fuzzy Match Logic
-    found_user_id := false
-    target_user_id := strings.ToLower(strings.ReplaceAll("user_id", "_", ""))
+    found_user_i_d := false
+    target_user_i_d := strings.ToLower(strings.ReplaceAll("user_i_d", "_", ""))
     
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
-        if normalizedK == target_user_id {
+        if normalizedK == target_user_i_d {
             
-            val_user_id, _ = v.(string)
+            val_user_i_d, _ = v.(string)
             
-            found_user_id = true
+            found_user_i_d = true
             break
         }
     }
     
-    if !found_user_id {
+    if !found_user_i_d {
        // Optional: Log or Error if required param missing?
     }
     
     
     // Determine Type string (Primitive vs Complex)
     
-    var val_account_id string
+    var val_account_i_d string
     
 
     // Fuzzy Match Logic
-    found_account_id := false
-    target_account_id := strings.ToLower(strings.ReplaceAll("account_id", "_", ""))
+    found_account_i_d := false
+    target_account_i_d := strings.ToLower(strings.ReplaceAll("account_i_d", "_", ""))
     
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
-        if normalizedK == target_account_id {
+        if normalizedK == target_account_i_d {
             
-            val_account_id, _ = v.(string)
+            val_account_i_d, _ = v.(string)
             
-            found_account_id = true
+            found_account_i_d = true
             break
         }
     }
     
-    if !found_account_id {
+    if !found_account_i_d {
        // Optional: Log or Error if required param missing?
     }
     
 
     // Call
-    ret0, ret1 := libreria_a_transfers_national.GetUserBalance(val_user_id, val_account_id, )
+    ret0, ret1 := libreria_a_transfers_national.GetUserBalance(val_user_i_d, val_account_i_d, )
     
     
     // Handle error convention (last return is error)

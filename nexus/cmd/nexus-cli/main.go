@@ -45,8 +45,22 @@ type Param struct {
 	FieldName string // PascalCase for struct
 }
 
+type StructMetadata struct {
+	Name      string
+	JsonName  string // Snake case of struct name for potential usage
+	Fields    []StructField
+	Namespace string
+}
+
+type StructField struct {
+	Name    string
+	Type    string
+	JSONTag string
+}
+
 type Catalog struct {
-	Services []ServiceEntry `json:"services"`
+	Services []ServiceEntry   `json:"services"`
+	Structs  []StructMetadata `json:"structs"`
 }
 
 type ServiceEntry struct {
@@ -240,37 +254,31 @@ func resolveDefaultCatalog() string {
 	return "catalog.json"
 }
 
+// --- Path Resolution Logic (FIXED) ---
+
 func resolveOutputDir(flagPath string) (string, error) {
 	// 1. Explicit Flag
 	if flagPath != "" {
 		if _, err := os.Stat(flagPath); os.IsNotExist(err) {
-			// Try to create it if explicitly asked
 			if err := os.MkdirAll(flagPath, 0755); err != nil {
 				return "", fmt.Errorf("could not create output dir %s: %v", flagPath, err)
 			}
 		}
-		return flagPath, nil
+		path, _ := filepath.Abs(flagPath)
+		return path, nil
 	}
 
-	// 2. Auto-Discovery Candidates
-	// We look for a folder named "generated" in common locations.
-	candidates := []string{
-		"generated",       // Run from nexus/
-		"nexus/generated", // Run from repo root
-		"../../generated", // Run from nexus/cmd/nexus-cli
-		"../generated",    // Run from nexus/cmd
-	}
+	// 2. Default: Create 'generated' in Current Working Directory
+	cwd, _ := os.Getwd()
+	target := filepath.Join(cwd, "generated")
 
-	for _, c := range candidates {
-		info, err := os.Stat(c)
-		if err == nil && info.IsDir() {
-			abs, _ := filepath.Abs(c)
-			return abs, nil
+	if _, err := os.Stat(target); os.IsNotExist(err) {
+		if err := os.MkdirAll(target, 0755); err != nil {
+			return "", fmt.Errorf("could not create output dir %s: %v", target, err)
 		}
 	}
 
-	// 3. Fallback: Fail nicely
-	return "", fmt.Errorf("could not auto-detect 'generated' directory")
+	return target, nil
 }
 
 // --- Build / Crawler Logic ---
@@ -329,7 +337,7 @@ func runBuild(debug bool, outputFlag string) {
 
 	updateGlobalCatalog(catalog)
 
-	// 4. Generate Code (Server & SDK)
+	// 4. Generate Code
 	outputDir, err := resolveOutputDir(outputFlag)
 	if err != nil {
 		fmt.Printf("Error resolving output directory: %v\n", err)
@@ -337,6 +345,9 @@ func runBuild(debug bool, outputFlag string) {
 		return
 	}
 	fmt.Printf("Writing generated code to: %s\n", outputDir)
+
+	// Dump Local Catalog
+	writeLocalCatalog(catalog, outputDir)
 
 	if err := generateServer(catalog, allMetadata, outputDir); err != nil {
 		fmt.Printf("Error generating server: %v\n", err)
@@ -349,29 +360,17 @@ func runBuild(debug bool, outputFlag string) {
 	} else {
 		fmt.Println("SDK code generated.")
 	}
+
+	if err := generateTypes(catalog, outputDir); err != nil {
+		fmt.Printf("Error generating Types: %v\n", err)
+	} else {
+		fmt.Println("Types code generated.")
+	}
 }
 
 // --- Code Generation ---
 
 func generateServer(catalog Catalog, metadata []FunctionMetadata, outputDir string) error {
-	// We need to map ServiceEntry matched with FunctionMetadata to get the Real Signature details if needed,
-	// but ServiceEntry has Types.
-	// Actually, for the adapter, we need to know the imports (package path) to call the function.
-	// e.g. libreria_a_system "github.com/japablazatww/libreria-a/system"
-
-	// Problem: `metadata` flattened list might collide if same func name in diff pkg.
-	// We need to track the Go Package Path for each service entry.
-	// We didn't store the Go Package Path in ServiceEntry or FunctionMetadata nicely.
-	// Let's assume we can derive it or we should have stored it.
-	// Update: `parseLibrary` has `path` and `namespace`.
-
-	// RE-NOTICE: FunctionMetadata struct in main.go doesn't have PackagePath.
-	// I will rely on the `ServiceEntry.Namespace` which is `libreria-a.transfers.national`.
-	// I can map that back to a Go Import if I use a convention or if I enhanced the metadata.
-	// Convention: `libreria-a.transfers.national` -> `github.com/japablazatww/libreria-a/transfers/national`
-	// This works for this PoC.
-
-	// Helper to deduplicate imports
 	imports := make(map[string]string) // path -> alias
 
 	type HandlerData struct {
@@ -385,14 +384,9 @@ func generateServer(catalog Catalog, metadata []FunctionMetadata, outputDir stri
 	handlers := []HandlerData{}
 
 	for _, svc := range catalog.Services {
-		// Namespace: libreria-a.transfers.national
-		// Import Path: github.com/japablazatww/ + (replace . with /)
-		// Special case: libreria-a -> github.com/japablazatww/libreria-a (no sub)
-
 		validPath := strings.ReplaceAll(svc.Namespace, ".", "/")
 		importPath := "github.com/japablazatww/" + validPath
 
-		// Alias: libreria_a_transfers_national
 		alias := strings.ReplaceAll(svc.Namespace, ".", "_")
 		alias = strings.ReplaceAll(alias, "-", "_")
 
@@ -522,9 +516,6 @@ func wrapper{{.FuncAlias}}_{{.FuncName}}(params map[string]interface{}) ({{if .O
 	}
 	defer f.Close()
 
-	// Minimal template processing manually or via text/template
-	// Using strings.Replace for simplicity in this agent step or implementing text/template
-	// Let's use text/template for robustness.
 	return executeTemplate(f, tmpl, map[string]interface{}{
 		"Imports":  imports,
 		"Handlers": handlers,
@@ -576,7 +567,6 @@ func generateSDK(catalog Catalog, outputDir string) error {
 	var structs []StructDef
 
 	// BFS or DFS to traverse and build structs
-	// BFS or DFS to traverse and build structs
 	var traverse func(n *Node, prefix string) string // returns TypeName
 	traverse = func(n *Node, prefix string) string {
 		var typeName string
@@ -615,14 +605,7 @@ func generateSDK(catalog Catalog, outputDir string) error {
 	}
 	defer f.Close()
 
-	// Actually writing the template code properly for SDK is tricky.
-	// I will output a SIMPLIFIED SDK that matches the consumer expectation:
-	// client.LibreriaA.System.GetSystemStatus
-
-	// I will generate the structs.
-	// And I will generate a hardcoded NewClient for "LibreriaA" specifically to ensure it works for the PoC,
-	// rather than a perfect generic tree builder.
-
+	// Manual Init PoC
 	manualInit := `
 	c.Libreriaa = &LibreriaaClient{transport: t}
 	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
@@ -632,6 +615,31 @@ func generateSDK(catalog Catalog, outputDir string) error {
 	`
 
 	return executeSDKTemplate(f, structs, manualInit)
+}
+
+func generateTypes(catalog Catalog, outputDir string) error {
+	tmpl := `package generated
+
+// --- Shared Types ---
+
+type GenericRequest struct {
+	Params map[string]interface{} ` + "`" + `json:"params"` + "`" + `
+}
+
+{{range .Structs}}
+type {{.Name}} struct {
+{{range .Fields}}
+    {{.Name}} {{.Type}} ` + "`" + `json:"{{.JSONTag}}"` + "`" + `
+{{end}}
+}
+{{end}}
+`
+	f, err := os.Create(filepath.Join(outputDir, "types_gen.go"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return executeTemplate(f, tmpl, catalog)
 }
 
 func executeTemplate(w io.Writer, tmplStr string, data interface{}) error {
@@ -752,8 +760,9 @@ func crawlLibrary(currentPath string, currentNamespace string, catalog *Catalog,
 		if debug {
 			fmt.Printf("DEBUG: Found Domain at %s. Parsing functions...\n", currentNamespace)
 		}
-		meta, entries := parseLibrary(currentPath, currentNamespace, debug)
+		meta, entries, structs := parseLibrary(currentPath, currentNamespace, debug)
 		catalog.Services = append(catalog.Services, entries...)
+		catalog.Structs = append(catalog.Structs, structs...)
 		*allMetadata = append(*allMetadata, meta...)
 	}
 
@@ -768,61 +777,61 @@ func crawlLibrary(currentPath string, currentNamespace string, catalog *Catalog,
 	}
 }
 
-func execCmd(dir string, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	return cmd.Run()
-}
-
-func ensureLibraryInstalled(widthDir string, pkg string, version string, debug bool) error {
-	// usage: go get pkg@version
-	target := fmt.Sprintf("%s@%s", pkg, version)
-	cmd := exec.Command("go", "get", target)
-	cmd.Dir = widthDir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("error running go get: %s\nOutput: %s", err, string(output))
-	}
-	if debug {
-		fmt.Printf("\nDEBUG: go get output:\n%s\n", string(output))
-	}
-
-	return nil
-}
-
-func resolvePackagePath(withDir string, pkg string, debug bool) (string, error) {
-	// Use -m to resolve the Module Root, as the root might not be a package anymore (no .go files)
-	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", pkg)
-	cmd.Dir = withDir
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		if debug {
-			fmt.Printf("DEBUG: go list error output:\n%s\n", string(output))
-		}
-		return "", fmt.Errorf("go list failed: %v", err)
-	}
-	path := strings.TrimSpace(string(output))
-	if debug {
-		fmt.Printf("DEBUG: Raw path bytes: %x\n", path)
-	}
-	return path, nil
-}
-
-func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata, []ServiceEntry) {
+func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata, []ServiceEntry, []StructMetadata) {
 	fset := token.NewFileSet()
 	// Parse only .go files in this directory
 	pkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		log.Printf("Warning: error parsing %s: %v", path, err)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	var metadata []FunctionMetadata
 	var entries []ServiceEntry
+	var structs []StructMetadata
 
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Files {
 			for _, decl := range file.Decls {
+				// 1. Structs
+				if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.TYPE {
+					for _, spec := range genDecl.Specs {
+						if typeSpec, ok := spec.(*ast.TypeSpec); ok {
+							if structType, ok := typeSpec.Type.(*ast.StructType); ok {
+								if !typeSpec.Name.IsExported() {
+									continue
+								}
+								structName := typeSpec.Name.Name
+								var fields []StructField
+								for _, field := range structType.Fields.List {
+									fType := typeToString(field.Type)
+									// Parse Tag
+									tag := ""
+									if field.Tag != nil {
+										tag = strings.ReplaceAll(field.Tag.Value, "`", "")
+										tag = strings.ReplaceAll(tag, "json:\"", "")
+										tag = strings.ReplaceAll(tag, "\"", "")
+									}
+									for _, name := range field.Names {
+										fields = append(fields, StructField{
+											Name:    name.Name,
+											Type:    fType,
+											JSONTag: tag,
+										})
+									}
+								}
+								structs = append(structs, StructMetadata{
+									Name:      structName,
+									JsonName:  toSnakeCase(structName),
+									Fields:    fields,
+									Namespace: namespace,
+								})
+							}
+						}
+					}
+				}
+
+				// 2. Functions
 				if fn, ok := decl.(*ast.FuncDecl); ok {
 					if !fn.Name.IsExported() {
 						continue
@@ -892,7 +901,7 @@ func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata
 			}
 		}
 	}
-	return metadata, entries
+	return metadata, entries, structs
 }
 
 func updateGlobalCatalog(cat Catalog) {
@@ -913,6 +922,59 @@ func updateGlobalCatalog(cat Catalog) {
 	encGlobal.SetIndent("", "  ")
 	encGlobal.Encode(cat)
 	fmt.Printf("Success. Catalog updated: %s\n", filepath.Join(globalDir, "catalog.json"))
+}
+
+func writeLocalCatalog(cat Catalog, outputDir string) {
+	f, err := os.Create(filepath.Join(outputDir, "catalog.json"))
+	if err != nil {
+		fmt.Printf("Warning: Could not write catalog.json: %v\n", err)
+		return
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "  ")
+	enc.Encode(cat)
+	fmt.Println("Catalog saved to generated folder.")
+}
+
+func execCmd(dir string, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	return cmd.Run()
+}
+
+func ensureLibraryInstalled(widthDir string, pkg string, version string, debug bool) error {
+	// usage: go get pkg@version
+	target := fmt.Sprintf("%s@%s", pkg, version)
+	cmd := exec.Command("go", "get", target)
+	cmd.Dir = widthDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error running go get: %s\nOutput: %s", err, string(output))
+	}
+	if debug {
+		fmt.Printf("\nDEBUG: go get output:\n%s\n", string(output))
+	}
+
+	return nil
+}
+
+func resolvePackagePath(withDir string, pkg string, debug bool) (string, error) {
+	// Use -m to resolve the Module Root, as the root might not be a package anymore (no .go files)
+	cmd := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", pkg)
+	cmd.Dir = withDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		if debug {
+			fmt.Printf("DEBUG: go list error output:\n%s\n", string(output))
+		}
+		return "", fmt.Errorf("go list failed: %v", err)
+	}
+	path := strings.TrimSpace(string(output))
+	if debug {
+		fmt.Printf("DEBUG: Raw path bytes: %x\n", path)
+	}
+	return path, nil
 }
 
 // --- Helpers ---
@@ -938,12 +1000,7 @@ func toSnakeCase(str string) string {
 	for i := 0; i < length; i++ {
 		r := runes[i]
 		if i > 0 && unicode.IsUpper(r) {
-			prev := runes[i-1]
-			if unicode.IsLower(prev) {
-				result.WriteRune('_')
-			} else if i+1 < length && unicode.IsLower(runes[i+1]) {
-				result.WriteRune('_')
-			}
+			result.WriteRune('_')
 		}
 		result.WriteRune(unicode.ToLower(r))
 	}
