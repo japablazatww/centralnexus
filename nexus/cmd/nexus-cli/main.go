@@ -275,7 +275,7 @@ func runBuild(debug bool) {
 		}
 
 		// 2. Resolve Path (using go list in temp context)
-		path, err := resolvePackagePath(tempDir, lib)
+		path, err := resolvePackagePath(tempDir, lib, debug)
 		if err != nil {
 			fmt.Printf("Error resolving path: %v\n", err)
 			continue
@@ -287,7 +287,7 @@ func runBuild(debug bool) {
 		}
 
 		// 3. Parse AST
-		meta, entries := parseLibrary(path, lib)
+		meta, entries := parseLibrary(path, lib, debug)
 		if debug {
 			fmt.Printf("DEBUG: Parsed %d functions from %s\n", len(entries), lib)
 		}
@@ -322,33 +322,49 @@ func ensureLibraryInstalled(widthDir string, pkg string, debug bool) error {
 	return nil
 }
 
-func resolvePackagePath(withDir string, pkg string) (string, error) {
+func resolvePackagePath(withDir string, pkg string, debug bool) (string, error) {
 	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", pkg)
 	cmd.Dir = withDir
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(output)), nil
+	path := strings.TrimSpace(string(output))
+	if debug {
+		fmt.Printf("DEBUG: Raw path bytes: %x\n", path)
+	}
+	return path, nil
 }
 
-func parseLibrary(path string, namespace string) ([]FunctionMetadata, []ServiceEntry) {
+func parseLibrary(path string, namespace string, debug bool) ([]FunctionMetadata, []ServiceEntry) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		log.Printf("Warning: error parsing %s: %v", path, err)
 		return nil, nil
 	}
+	if debug {
+		fmt.Printf("DEBUG: ParseDir found %d packages in %s\n", len(pkgs), path)
+	}
 
 	var metadata []FunctionMetadata
 	var entries []ServiceEntry
 
 	for _, pkg := range pkgs {
+		if debug {
+			fmt.Printf("DEBUG: Visiting package %s\n", pkg.Name)
+		}
 		for _, file := range pkg.Files {
+			if debug {
+				fmt.Printf("DEBUG: Visiting file in %s\n", pkg.Name)
+			}
 			for _, decl := range file.Decls {
 				if fn, ok := decl.(*ast.FuncDecl); ok {
 					if !fn.Name.IsExported() {
 						continue
+					}
+					if debug {
+						fmt.Printf("DEBUG: Found exported func %s\n", fn.Name.Name)
 					}
 
 					fname := fn.Name.Name
