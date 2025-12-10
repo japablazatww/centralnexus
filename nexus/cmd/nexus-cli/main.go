@@ -457,9 +457,16 @@ func handle{{.FuncAlias}}_{{.FuncName}}(w http.ResponseWriter, r *http.Request) 
 func wrapper{{.FuncAlias}}_{{.FuncName}}(params map[string]interface{}) ({{if .Outputs}}interface{}, error{{else}}{{end}}) {
     // Inputs: {{range .Inputs}}{{.Name}}({{.Type}}), {{end}}
     
+    {{$alias := .FuncAlias}}
     {{range .Inputs}}
-    var val_{{.Name}} {{.Type}} // simplified extraction
     
+    // Determine Type string (Primitive vs Complex)
+    {{if or (eq .Type "string") (eq .Type "float64") (eq .Type "int") (eq .Type "bool")}}
+    var val_{{.Name}} {{.Type}}
+    {{else}}
+    var val_{{.Name}} {{$alias}}.{{.Type}}
+    {{end}}
+
     // Fuzzy Match Logic
     found_{{.Name}} := false
     target_{{.Name}} := strings.ToLower(strings.ReplaceAll("{{.Name}}", "_", ""))
@@ -467,13 +474,21 @@ func wrapper{{.FuncAlias}}_{{.FuncName}}(params map[string]interface{}) ({{if .O
     for k, v := range params {
         normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
         if normalizedK == target_{{.Name}} {
-             _ = v
             {{if eq .Type "string"}}
             val_{{.Name}}, _ = v.(string)
             {{else if eq .Type "float64"}}
             val_{{.Name}}, _ = v.(float64)
+            {{else if eq .Type "int"}}
+             // JSON numbers are float64
+             if fVal, ok := v.(float64); ok {
+                 val_{{.Name}} = int(fVal)
+             }
+            {{else if eq .Type "bool"}}
+            val_{{.Name}}, _ = v.(bool)
             {{else}}
-            // Fallback
+            // Complex Type: Convert map -> json -> struct
+            jsonBody, _ := json.Marshal(v)
+            json.Unmarshal(jsonBody, &val_{{.Name}})
             {{end}}
             found_{{.Name}} = true
             break
@@ -482,7 +497,6 @@ func wrapper{{.FuncAlias}}_{{.FuncName}}(params map[string]interface{}) ({{if .O
     
     if !found_{{.Name}} {
        // Optional: Log or Error if required param missing?
-       // For PoC we assume zero value is okay or it wasn't found.
     }
     {{end}}
 
