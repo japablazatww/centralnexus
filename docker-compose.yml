@@ -2,14 +2,14 @@ services:
   nexus:
     build:
       context: .
-      dockerfile: centralnexus/nexus/Dockerfile
+      dockerfile: nexus/Dockerfile
     ports:
       - "8080:8080"
 
   consumer:
     build:
       context: .
-      dockerfile: centralnexus/consumer/Dockerfile
+      dockerfile: consumer/Dockerfile
     depends_on:
       - nexus
     environment:
