@@ -89,4 +89,16 @@ Cuando ejecutas `nexus-cli build`, la herramienta no solo indexa, sino que **esc
     -   Permite al consumidor usar autocompletado: `client.LibreriaA.Transfers.National...`.
     -   Abstrae las llamadas HTTP y la serialización JSON.
 
+### ¿Dónde debo ejecutar `nexus-cli build`?
+Actualmente, la herramienta asume una estructura de carpetas específica para saber dónde depositar el código generado (`nexus/generated`).
+
+**Debes ejecutar el comando desde dentro de `nexus/cmd/nexus-cli`:**
+
+```bash
+cd nexus/cmd/nexus-cli
+nexus-cli build
+```
+
+Esto asegura que los archivos `server_gen.go` y `sdk_gen.go` se escriban correctamente en `../../generated`.
+
 *Recuerda: Si algo cambia en las librerías base, corre `build` para actualizar estos archivos.*
