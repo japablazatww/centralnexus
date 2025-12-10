@@ -55,6 +55,7 @@ El código (**auto-generado**) reside en `nexus/generated`. Se regenera cuando:
     ```bash
     nexus-cli build
     ```
+    *(Nota: La CLI detecta automáticamente la carpeta `nexus/generated` si estás en la raíz, o puedes usar `--output`.)*
 
 ### 2. ¿Cómo funciona "bajo el capó"?
 1.  **Crawl & Index**: La CLI descarga las librerías (`go get`), las analiza (AST Parsing) y detecta funciones exportadas.
