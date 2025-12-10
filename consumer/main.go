@@ -80,4 +80,24 @@ func main() {
 	} else {
 		fmt.Printf("International Transfer Result: %v\n", intRes)
 	}
+
+	// 5. Complex Transfer (Struct Input/Output)
+	fmt.Println("\n--- Testing ComplexTransfer (Struct) ---")
+	complexReqPayload := map[string]interface{}{
+		"source_account": "ACC-COMPLEX-001",
+		"dest_account":   "ACC-COMPLEX-002",
+		"amount":         999.99,
+		"currency":       "USD",
+	}
+	complexReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"req": complexReqPayload,
+		},
+	}
+	complexRes, err := client.Libreriaa.Transfers.National.ComplexTransfer(complexReq)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Complex Transfer Result: %v\n", complexRes)
+	}
 }
