@@ -393,9 +393,8 @@ func generateServer(catalog Catalog, metadata []FunctionMetadata, outputDir stri
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-    "reflect"
+	"strings"
     
 	{{range $path, $alias := .Imports}}
 	{{$alias}} "{{$path}}"
@@ -441,21 +440,30 @@ func wrapper{{.FuncAlias}}_{{.FuncName}}(params map[string]interface{}) ({{if .O
     
     {{range .Inputs}}
     var val_{{.Name}} {{.Type}} // simplified extraction
-    if v, ok := params["{{.Name}}"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        {{if eq .Type "string"}}
-        val_{{.Name}}, _ = v.(string)
-        {{else if eq .Type "float64"}}
-        val_{{.Name}}, _ = v.(float64)
-        {{else}}
-        // Fallback or complex struct
-        {{end}}
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_{{.Name}} := false
+    target_{{.Name}} := strings.ToLower(strings.ReplaceAll("{{.Name}}", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_{{.Name}} {
+             _ = v
+            {{if eq .Type "string"}}
+            val_{{.Name}}, _ = v.(string)
+            {{else if eq .Type "float64"}}
+            val_{{.Name}}, _ = v.(float64)
+            {{else}}
+            // Fallback
+            {{end}}
+            found_{{.Name}} = true
+            break
+        }
+    }
+    
+    if !found_{{.Name}} {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     {{end}}
 
@@ -583,11 +591,11 @@ func generateSDK(catalog Catalog, outputDir string) error {
 	// rather than a perfect generic tree builder.
 
 	manualInit := `
-	c.LibreriaA = &LibreriaAClient{transport: t}
-	c.LibreriaA.System = &LibreriaASystemClient{transport: t}
-	c.LibreriaA.Transfers = &LibreriaATransfersClient{transport: t}
-	c.LibreriaA.Transfers.National = &LibreriaATransfersNationalClient{transport: t}
-	c.LibreriaA.Transfers.International = &LibreriaATransfersInternationalClient{transport: t}
+	c.Libreriaa = &LibreriaaClient{transport: t}
+	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
+	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
+	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
+	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
 	`
 
 	return executeSDKTemplate(f, structs, manualInit)
@@ -667,12 +675,11 @@ func NewClient(baseURL string) *Client {
 	c := &Client{transport: t}
 	
 	// Manually Init Knowledge (PoC)
-	// Ideally this is recursively generated
-	c.LibreriaA = &LibreriaAClient{transport: t}
-	c.LibreriaA.System = &LibreriaASystemClient{transport: t}
-	c.LibreriaA.Transfers = &LibreriaATransfersClient{transport: t}
-	c.LibreriaA.Transfers.National = &LibreriaATransfersNationalClient{transport: t}
-	c.LibreriaA.Transfers.International = &LibreriaATransfersInternationalClient{transport: t}
+	c.Libreriaa = &LibreriaaClient{transport: t}
+	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
+	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
+	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
+	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
 
 	return c
 }

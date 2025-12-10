@@ -7,9 +7,7 @@ import (
 	"net/http"
 )
 
-type GenericRequest struct {
-	Params map[string]interface{}
-}
+
 
 type Transport interface {
 	Call(method string, req GenericRequest) (interface{}, error)
@@ -43,49 +41,60 @@ func (t *httpTransport) Call(method string, req GenericRequest) (interface{}, er
 // --- Structs ---
 
 
-type Client struct {
+type LibreriaaTransfersNationalClient struct {
 	transport Transport
 	
 }
 
 
-func (c *Client) GetSystemStatus(req GenericRequest) (interface{}, error) {
-	return c.transport.Call("libreria-a.system.GetSystemStatus", req)
-}
-
-
-type Client struct {
-	transport Transport
-	
-}
-
-
-func (c *Client) InternationalTransfer(req GenericRequest) (interface{}, error) {
-	return c.transport.Call("libreria-a.transfers.international.InternationalTransfer", req)
-}
-
-
-type Client struct {
-	transport Transport
-	
-}
-
-
-func (c *Client) GetUserBalance(req GenericRequest) (interface{}, error) {
+func (c *LibreriaaTransfersNationalClient) GetUserBalance(req GenericRequest) (interface{}, error) {
 	return c.transport.Call("libreria-a.transfers.national.GetUserBalance", req)
 }
 
-func (c *Client) Transfer(req GenericRequest) (interface{}, error) {
+func (c *LibreriaaTransfersNationalClient) Transfer(req GenericRequest) (interface{}, error) {
 	return c.transport.Call("libreria-a.transfers.national.Transfer", req)
 }
 
 
-type Client struct {
+type LibreriaaTransfersInternationalClient struct {
 	transport Transport
 	
-	International *Client
+}
+
+
+func (c *LibreriaaTransfersInternationalClient) InternationalTransfer(req GenericRequest) (interface{}, error) {
+	return c.transport.Call("libreria-a.transfers.international.InternationalTransfer", req)
+}
+
+
+type LibreriaaTransfersClient struct {
+	transport Transport
 	
-	National *Client
+	National *LibreriaaTransfersNationalClient
+	
+	International *LibreriaaTransfersInternationalClient
+	
+}
+
+
+
+type LibreriaaSystemClient struct {
+	transport Transport
+	
+}
+
+
+func (c *LibreriaaSystemClient) GetSystemStatus(req GenericRequest) (interface{}, error) {
+	return c.transport.Call("libreria-a.system.GetSystemStatus", req)
+}
+
+
+type LibreriaaClient struct {
+	transport Transport
+	
+	Transfers *LibreriaaTransfersClient
+	
+	System *LibreriaaSystemClient
 	
 }
 
@@ -94,18 +103,7 @@ type Client struct {
 type Client struct {
 	transport Transport
 	
-	System *Client
-	
-	Transfers *Client
-	
-}
-
-
-
-type Client struct {
-	transport Transport
-	
-	Libreriaa *Client
+	Libreriaa *LibreriaaClient
 	
 }
 
@@ -120,12 +118,11 @@ func NewClient(baseURL string) *Client {
 	c := &Client{transport: t}
 	
 	// Manually Init Knowledge (PoC)
-	// Ideally this is recursively generated
-	c.LibreriaA = &LibreriaAClient{transport: t}
-	c.LibreriaA.System = &LibreriaASystemClient{transport: t}
-	c.LibreriaA.Transfers = &LibreriaATransfersClient{transport: t}
-	c.LibreriaA.Transfers.National = &LibreriaATransfersNationalClient{transport: t}
-	c.LibreriaA.Transfers.International = &LibreriaATransfersInternationalClient{transport: t}
+	c.Libreriaa = &LibreriaaClient{transport: t}
+	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
+	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
+	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
+	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
 
 	return c
 }

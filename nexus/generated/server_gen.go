@@ -2,9 +2,8 @@ package generated
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-    "reflect"
+	"strings"
     
 	
 	libreria_a_system "github.com/japablazatww/libreria-a/system"
@@ -58,17 +57,26 @@ func wrapperlibreria_a_system_GetSystemStatus(params map[string]interface{}) (in
     
     
     var val_code string // simplified extraction
-    if v, ok := params["code"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_code, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_code := false
+    target_code := strings.ToLower(strings.ReplaceAll("code", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_code {
+             _ = v
+            
+            val_code, _ = v.(string)
+            
+            found_code = true
+            break
+        }
+    }
+    
+    if !found_code {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
@@ -114,31 +122,49 @@ func wrapperlibreria_a_transfers_national_GetUserBalance(params map[string]inter
     
     
     var val_user_id string // simplified extraction
-    if v, ok := params["user_id"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_user_id, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_user_id := false
+    target_user_id := strings.ToLower(strings.ReplaceAll("user_id", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_user_id {
+             _ = v
+            
+            val_user_id, _ = v.(string)
+            
+            found_user_id = true
+            break
+        }
+    }
+    
+    if !found_user_id {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_account_id string // simplified extraction
-    if v, ok := params["account_id"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_account_id, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_account_id := false
+    target_account_id := strings.ToLower(strings.ReplaceAll("account_id", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_account_id {
+             _ = v
+            
+            val_account_id, _ = v.(string)
+            
+            found_account_id = true
+            break
+        }
+    }
+    
+    if !found_account_id {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
@@ -184,59 +210,95 @@ func wrapperlibreria_a_transfers_national_Transfer(params map[string]interface{}
     
     
     var val_source_account string // simplified extraction
-    if v, ok := params["source_account"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_source_account, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_source_account := false
+    target_source_account := strings.ToLower(strings.ReplaceAll("source_account", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_source_account {
+             _ = v
+            
+            val_source_account, _ = v.(string)
+            
+            found_source_account = true
+            break
+        }
+    }
+    
+    if !found_source_account {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_dest_account string // simplified extraction
-    if v, ok := params["dest_account"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_dest_account, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_dest_account := false
+    target_dest_account := strings.ToLower(strings.ReplaceAll("dest_account", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_dest_account {
+             _ = v
+            
+            val_dest_account, _ = v.(string)
+            
+            found_dest_account = true
+            break
+        }
+    }
+    
+    if !found_dest_account {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_amount float64 // simplified extraction
-    if v, ok := params["amount"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_amount, _ = v.(float64)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_amount := false
+    target_amount := strings.ToLower(strings.ReplaceAll("amount", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_amount {
+             _ = v
+            
+            val_amount, _ = v.(float64)
+            
+            found_amount = true
+            break
+        }
+    }
+    
+    if !found_amount {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_currency string // simplified extraction
-    if v, ok := params["currency"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_currency, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_currency := false
+    target_currency := strings.ToLower(strings.ReplaceAll("currency", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_currency {
+             _ = v
+            
+            val_currency, _ = v.(string)
+            
+            found_currency = true
+            break
+        }
+    }
+    
+    if !found_currency {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 
@@ -282,59 +344,95 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
     
     
     var val_source_account string // simplified extraction
-    if v, ok := params["source_account"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_source_account, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_source_account := false
+    target_source_account := strings.ToLower(strings.ReplaceAll("source_account", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_source_account {
+             _ = v
+            
+            val_source_account, _ = v.(string)
+            
+            found_source_account = true
+            break
+        }
+    }
+    
+    if !found_source_account {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_dest_iban string // simplified extraction
-    if v, ok := params["dest_iban"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_dest_iban, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_dest_iban := false
+    target_dest_iban := strings.ToLower(strings.ReplaceAll("dest_iban", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_dest_iban {
+             _ = v
+            
+            val_dest_iban, _ = v.(string)
+            
+            found_dest_iban = true
+            break
+        }
+    }
+    
+    if !found_dest_iban {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_amount float64 // simplified extraction
-    if v, ok := params["amount"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_amount, _ = v.(float64)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_amount := false
+    target_amount := strings.ToLower(strings.ReplaceAll("amount", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_amount {
+             _ = v
+            
+            val_amount, _ = v.(float64)
+            
+            found_amount = true
+            break
+        }
+    }
+    
+    if !found_amount {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
     var val_swift_code string // simplified extraction
-    if v, ok := params["swift_code"]; ok {
-        // Simple type assertion for PoC (float64 for json numbers)
-        // In real world, use reflection or sophisticated casting
-        // Here we assume happy path or simple cast
-        // JSON numbers are float64.
-        _ = v
-        
-        val_swift_code, _ = v.(string)
-        
-        
-        // Dynamic fuzzy match fallback (omitted for brevity in this step, using direct key)
+    
+    // Fuzzy Match Logic
+    found_swift_code := false
+    target_swift_code := strings.ToLower(strings.ReplaceAll("swift_code", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_swift_code {
+             _ = v
+            
+            val_swift_code, _ = v.(string)
+            
+            found_swift_code = true
+            break
+        }
+    }
+    
+    if !found_swift_code {
+       // Optional: Log or Error if required param missing?
+       // For PoC we assume zero value is okay or it wasn't found.
     }
     
 

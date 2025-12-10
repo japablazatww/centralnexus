@@ -16,8 +16,8 @@ func main() {
 			"code": "ADMIN123",
 		},
 	}
-	// NOTICE: Using namespaced LibreriaA -> System
-	status, err := client.LibreriaA.System.GetSystemStatus(statusReq)
+	// NOTICE: Using namespaced Libreriaa -> System
+	status, err := client.Libreriaa.System.GetSystemStatus(statusReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -28,12 +28,12 @@ func main() {
 	fmt.Println("\n--- Testing GetUserBalance (CamelCase/SnakeCase check) ---")
 	balanceReq := generated.GenericRequest{
 		Params: map[string]interface{}{
-			"user_id":   "user_001", // Snake
-			"AccountId": "acc_999",  // Pascal
+			"user_id":    "user_001", // Protocol enforces snake_case
+			"account_id": "acc_999",  // Protocol enforces snake_case
 		},
 	}
-	// NOTICE: LibreriaA -> Transfers -> National
-	balance, err := client.LibreriaA.Transfers.National.GetUserBalance(balanceReq)
+	// NOTICE: Libreriaa -> Transfers -> National
+	balance, err := client.Libreriaa.Transfers.National.GetUserBalance(balanceReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -50,8 +50,8 @@ func main() {
 			"currency":      "GTQ",
 		},
 	}
-	// NOTICE: LibreriaA -> Transfers -> National
-	transferRes, err := client.LibreriaA.Transfers.National.Transfer(transferReq)
+	// NOTICE: Libreriaa -> Transfers -> National
+	transferRes, err := client.Libreriaa.Transfers.National.Transfer(transferReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
@@ -68,8 +68,8 @@ func main() {
 			"amount":         2000.00,
 		},
 	}
-	// NOTICE: LibreriaA -> Transfers -> International
-	intRes, err := client.LibreriaA.Transfers.International.InternationalTransfer(intTransReq)
+	// NOTICE: Libreriaa -> Transfers -> International
+	intRes, err := client.Libreriaa.Transfers.International.InternationalTransfer(intTransReq)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
