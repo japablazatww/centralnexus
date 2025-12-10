@@ -9,12 +9,12 @@ Como el código está alojado en GitHub, puedes instalar la herramienta directam
 ### Windows (PowerShell)
 ```powershell
 $env:GOPROXY="direct"
-go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@latest
+go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@develop
 ```
 
 ### Linux / macOS
 ```bash
-GOPROXY=direct go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@latest
+GOPROXY=direct go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@develop
 ```
 
 *Nota: `GOPROXY=direct` asegura que descargues la última versión, ignorando el caché.*

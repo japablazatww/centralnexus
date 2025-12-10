@@ -24,7 +24,7 @@ La CLI se autogestiona. No necesitas generar catálogos manualmente.
 ```bash
 # Instalación
 $env:GOPROXY="direct"
-go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@latest
+go install github.com/japablazatww/centralnexus/nexus/cmd/nexus-cli@develop
 
 # Uso (Auto-descubrimiento en la primera ejecución)
 nexus-cli search --search-param user_id
