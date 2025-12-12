@@ -555,9 +555,6 @@ func generateSDK(catalog Catalog, outputDir string) error {
 	}
 
 	// Flatten tree to generate structs
-	// We need a list of all Struct Types to generate.
-	// Client, LibreriaAClient, LibreriaASystemClient, ...
-
 	type StructDef struct {
 		Name    string
 		Fields  []string // "System *LibreriaASystemClient"
@@ -599,22 +596,52 @@ func generateSDK(catalog Catalog, outputDir string) error {
 
 	traverse(root, "")
 
+	// --- Dynamic Init Code Generation ---
+	var initLines []string
+	var genInit func(n *Node, accessPath string, typePrefix string)
+	genInit = func(n *Node, accessPath string, typePrefix string) {
+		// Sorted keys to ensure deterministic output
+		// (optional but good for consistency)
+
+		for childName, childNode := range n.Children {
+			childAccess := accessPath + "." + childName
+			childType := typePrefix + childName + "Client"
+
+			// Line: c.Libreriaa = &LibreriaaClient{transport: t}
+			// Line: c.Libreriaa = &LibreriaaClient{transport: t}
+
+			// Needs "c." prefix? No, accessPath is "c" initially.
+			// But childAccess acts as next accessPath.
+			// wait, if I am at "c", child is "Libreriaa".
+			// generated line: c.Libreriaa = &LibreriaaClient...
+
+			// Logic check:
+			// Root (n=Client), accessPath="c", typePrefix=""
+			// Child "Libreriaa". childAccess="c.Libreriaa". childType="LibreriaaClient".
+			// Line: c.Libreriaa = &LibreriaaClient{transport: t} -> YES.
+
+			// Next recursion: accessPath="c.Libreriaa", typePrefix="Libreriaa"
+			// Child "System". childAccess="c.Libreriaa.System". childType="LibreriaaSystemClient".
+			// Line: c.Libreriaa.System = &LibreriaaSystemClient{transport: t} -> YES.
+
+			// Use the calculated full access path for the assignment
+			initLines = append(initLines, fmt.Sprintf("\t%s = &%s{transport: t}", childAccess, childType))
+
+			genInit(childNode, childAccess, typePrefix+childName)
+		}
+	}
+
+	genInit(root, "c", "")
+
+	initCode := strings.Join(initLines, "\n")
+
 	f, err := os.Create(filepath.Join(outputDir, "sdk_gen.go"))
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	// Manual Init PoC
-	manualInit := `
-	c.Libreriaa = &LibreriaaClient{transport: t}
-	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
-	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
-	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
-	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
-	`
-
-	return executeSDKTemplate(f, structs, manualInit)
+	return executeSDKTemplate(f, structs, initCode)
 }
 
 func generateTypes(catalog Catalog, outputDir string) error {
@@ -650,7 +677,7 @@ func executeTemplate(w io.Writer, tmplStr string, data interface{}) error {
 	return t.Execute(w, data)
 }
 
-func executeSDKTemplate(w io.Writer, structs interface{}, manualInit string) error {
+func executeSDKTemplate(w io.Writer, structs interface{}, initCode string) error {
 	const tmpl = `package generated
 
 import (
@@ -693,7 +720,7 @@ func (t *httpTransport) Call(method string, req GenericRequest) (interface{}, er
 
 // --- Structs ---
 
-{{range $struct := .}}
+{{range $struct := .Structs}}
 type {{$struct.Name}} struct {
 	transport Transport
 	{{range .Fields}}
@@ -715,12 +742,8 @@ func NewClient(baseURL string) *Client {
 	}
 	c := &Client{transport: t}
 	
-	// Manually Init Knowledge (PoC)
-	c.Libreriaa = &LibreriaaClient{transport: t}
-	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
-	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
-	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
-	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
+	// Dynamic Init
+{{.InitCode}}
 
 	return c
 }
@@ -729,7 +752,16 @@ func NewClient(baseURL string) *Client {
 	if err != nil {
 		return err
 	}
-	return t.Execute(w, structs)
+
+	data := struct {
+		Structs  interface{}
+		InitCode string
+	}{
+		Structs:  structs,
+		InitCode: initCode,
+	}
+
+	return t.Execute(w, data)
 }
 
 func crawlLibrary(currentPath string, currentNamespace string, catalog *Catalog, allMetadata *[]FunctionMetadata, debug bool) {

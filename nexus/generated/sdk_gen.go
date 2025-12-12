@@ -104,10 +104,32 @@ type LibreriaaClient struct {
 
 
 
+type LibreriabLoansClient struct {
+	transport Transport
+	
+}
+
+
+func (c *LibreriabLoansClient) CalculateLoan(req GenericRequest) (interface{}, error) {
+	return c.transport.Call("libreria-b.loans.CalculateLoan", req)
+}
+
+
+type LibreriabClient struct {
+	transport Transport
+	
+	Loans *LibreriabLoansClient
+	
+}
+
+
+
 type Client struct {
 	transport Transport
 	
 	Libreriaa *LibreriaaClient
+	
+	Libreriab *LibreriabClient
 	
 }
 
@@ -121,12 +143,14 @@ func NewClient(baseURL string) *Client {
 	}
 	c := &Client{transport: t}
 	
-	// Manually Init Knowledge (PoC)
+	// Dynamic Init
 	c.Libreriaa = &LibreriaaClient{transport: t}
 	c.Libreriaa.System = &LibreriaaSystemClient{transport: t}
 	c.Libreriaa.Transfers = &LibreriaaTransfersClient{transport: t}
 	c.Libreriaa.Transfers.National = &LibreriaaTransfersNationalClient{transport: t}
 	c.Libreriaa.Transfers.International = &LibreriaaTransfersInternationalClient{transport: t}
+	c.Libreriab = &LibreriabClient{transport: t}
+	c.Libreriab.Loans = &LibreriabLoansClient{transport: t}
 
 	return c
 }

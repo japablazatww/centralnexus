@@ -12,6 +12,8 @@ import (
 	
 	libreria_a_transfers_national "github.com/japablazatww/libreria-a/transfers/national"
 	
+	libreria_b_loans "github.com/japablazatww/libreria-b/loans"
+	
 )
 
 func RegisterHandlers(mux *http.ServeMux) {
@@ -25,6 +27,8 @@ func RegisterHandlers(mux *http.ServeMux) {
 	mux.HandleFunc("/libreria-a.transfers.national.ComplexTransfer", handlelibreria_a_transfers_national_ComplexTransfer)
 	
 	mux.HandleFunc("/libreria-a.transfers.international.InternationalTransfer", handlelibreria_a_transfers_international_InternationalTransfer)
+	
+	mux.HandleFunc("/libreria-b.loans.CalculateLoan", handlelibreria_b_loans_CalculateLoan)
 	
 }
 
@@ -536,6 +540,76 @@ func wrapperlibreria_a_transfers_international_InternationalTransfer(params map[
 
     // Call
     ret0, ret1 := libreria_a_transfers_international.InternationalTransfer(val_source_account, val_dest_iban, val_amount, val_swift_code, )
+    
+    
+    // Handle error convention (last return is error)
+    if ret1 != nil {
+        return nil, ret1
+    }
+    return ret0, nil
+    
+}
+
+func handlelibreria_b_loans_CalculateLoan(w http.ResponseWriter, r *http.Request) {
+	var req GenericRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// 1. Extract Parameters
+	params := req.Params
+	
+	// 2. Call Implementation
+	resp, err := wrapperlibreria_b_loans_CalculateLoan(params)
+	
+	// 3. Response
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+	}
+	json.NewEncoder(w).Encode(resp)
+	
+}
+
+func wrapperlibreria_b_loans_CalculateLoan(params map[string]interface{}) (interface{}, error) {
+    // Inputs: req(LoanRequest), 
+    
+    
+    
+    
+    // Determine Type string (Primitive vs Complex)
+    
+    var val_req libreria_b_loans.LoanRequest
+    
+
+    // Fuzzy Match Logic
+    found_req := false
+    target_req := strings.ToLower(strings.ReplaceAll("req", "_", ""))
+    
+    for k, v := range params {
+        normalizedK := strings.ToLower(strings.ReplaceAll(k, "_", ""))
+        if normalizedK == target_req {
+            
+            // Complex Type: Convert map -> json -> struct
+            jsonBody, _ := json.Marshal(v)
+            json.Unmarshal(jsonBody, &val_req)
+            
+            found_req = true
+            break
+        }
+    }
+    
+    if !found_req {
+       // Optional: Log or Error if required param missing?
+    }
+    
+
+    // Call
+    ret0, ret1 := libreria_b_loans.CalculateLoan(val_req, )
     
     
     // Handle error convention (last return is error)

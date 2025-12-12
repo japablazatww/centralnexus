@@ -100,4 +100,19 @@ func main() {
 	} else {
 		fmt.Printf("Complex Transfer Result: %v\n", complexRes)
 	}
+	// 6. Test Libreria B (Loans)
+	fmt.Println("\n--- Testing Libreria B (Loans) ---")
+	loanReq := generated.GenericRequest{
+		Params: map[string]interface{}{
+			"amount":   10000.0,
+			"term":     12,
+			"userType": "STANDARD",
+		},
+	}
+	loanRes, err := client.Libreriab.Loans.CalculateLoan(loanReq)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Loan Calculation Result: %v\n", loanRes)
+	}
 }

@@ -132,6 +132,27 @@
           "type": "error"
         }
       ]
+    },
+    {
+      "namespace": "libreria-b.loans",
+      "method": "CalculateLoan",
+      "description": "CalculateLoan determines if a loan is feasible and calculates payment.",
+      "inputs": [
+        {
+          "name": "req",
+          "type": "LoanRequest"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result_0",
+          "type": "LoanResponse"
+        },
+        {
+          "name": "result_1",
+          "type": "error"
+        }
+      ]
     }
   ],
   "structs": [
@@ -178,6 +199,55 @@
         }
       ],
       "Namespace": "libreria-a.transfers.national"
+    },
+    {
+      "Name": "LoanRequest",
+      "JsonName": "loan_request",
+      "Fields": [
+        {
+          "Name": "Amount",
+          "Type": "float64",
+          "JSONTag": "amount"
+        },
+        {
+          "Name": "Term",
+          "Type": "int",
+          "JSONTag": "term"
+        },
+        {
+          "Name": "UserType",
+          "Type": "string",
+          "JSONTag": "user_type"
+        }
+      ],
+      "Namespace": "libreria-b.loans"
+    },
+    {
+      "Name": "LoanResponse",
+      "JsonName": "loan_response",
+      "Fields": [
+        {
+          "Name": "Approved",
+          "Type": "bool",
+          "JSONTag": "approved"
+        },
+        {
+          "Name": "InterestRate",
+          "Type": "float64",
+          "JSONTag": "interest_rate"
+        },
+        {
+          "Name": "MonthlyPay",
+          "Type": "float64",
+          "JSONTag": "monthly_pay"
+        },
+        {
+          "Name": "Message",
+          "Type": "string",
+          "JSONTag": "message"
+        }
+      ],
+      "Namespace": "libreria-b.loans"
     }
   ]
 }

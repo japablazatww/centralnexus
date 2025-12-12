@@ -27,3 +27,25 @@ type TransferResponse struct {
 
 }
 
+type LoanRequest struct {
+
+    Amount float64 `json:"amount"`
+
+    Term int `json:"term"`
+
+    UserType string `json:"user_type"`
+
+}
+
+type LoanResponse struct {
+
+    Approved bool `json:"approved"`
+
+    InterestRate float64 `json:"interest_rate"`
+
+    MonthlyPay float64 `json:"monthly_pay"`
+
+    Message string `json:"message"`
+
+}
+

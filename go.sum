@@ -2,3 +2,5 @@ github.com/japablazatww/libreria-a v0.0.0-20251210032138-3f5450ae60cb h1:Yy/XtQm
 github.com/japablazatww/libreria-a v0.0.0-20251210032138-3f5450ae60cb/go.mod h1:S70uYVbtqUWtiYIkG1UbNpOiTPTceaGgS7Zo5xROPp8=
 github.com/japablazatww/libreria-a v0.0.0-20251210203640-ec455bed3c61 h1:kQOQar4M5NKCuMBl0UAmSCEuLLAKV2sAvflcDLCiFvw=
 github.com/japablazatww/libreria-a v0.0.0-20251210203640-ec455bed3c61/go.mod h1:S70uYVbtqUWtiYIkG1UbNpOiTPTceaGgS7Zo5xROPp8=
+github.com/japablazatww/libreria-b v0.0.0-20251212210745-26e0e11de9ab h1:wxl7U2mYckhNdBseVNGxt3UVHt1Ce/LE1p12VSGqf9k=
+github.com/japablazatww/libreria-b v0.0.0-20251212210745-26e0e11de9ab/go.mod h1:kzgZWAACB6BlpfCCJ5Nxu83mDbN+G7quU4bBQ2EA3UM=
